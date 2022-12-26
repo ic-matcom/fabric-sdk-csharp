@@ -1,30 +1,84 @@
-﻿namespace FabricCaClient
+﻿
+using FabricCaClient.HFBasicTypes;
+using System.Text.Json.Nodes;
+
+namespace FabricCaClient
 {
     /// <summary>
     ///  A class that encapsulates a set of methods to communicate with Hyperledger Fabric (HF)'s Certificate Authority (CA).
     /// </summary>
     public class CAClient
     {
-		/// <summary>
-		/// Enroll an identity
-		/// </summary>
-		/// /// <param name="x"></param>
-		/// <returns></returns>
-		public void enroll() { }
+        public ICryptoSuite CryptoSuite { get; set; }
 
-		/// <summary>
-		/// Reenroll an identity
-		/// </summary>
-		public void reenroll() { }
+        public static readonly string HFCA_CONTEXT_ROOT = "/api/v1/";
 
-		/// <summary>
-		/// Register an identity
-		/// </summary>
-		public void register() { }
+        private readonly string url; // find a more suitable name
 
-		/// <summary>
-		/// Revoke an identity
-		/// </summary>
-		public void revoke() { }
-	}
+        private static readonly string HFCA_REGISTER = HFCA_CONTEXT_ROOT + "register";
+        
+        /// <summary>
+        /// Enroll an identity
+        /// </summary>
+        /// /// <param name="x"></param>
+        /// <returns></returns>
+        public void Enroll() { }
+
+        /// <summary>
+        /// Reenroll an identity
+        /// </summary>
+        public void Reenroll() { }
+
+        private void setUpSSL() { 
+            throw new NotImplementedException();
+        }
+
+        private JsonObject HttpPost(string url, string body, IUser registrar)
+        {
+            throw new NotImplementedException();
+            return new JsonObject();
+        }
+
+        /// <summary>
+        /// Register an identity
+        /// </summary>
+        /// /// <param name="x"></param>
+        /// <returns></returns>
+        public string Register(RegistrationRequest registrationRequest, IUser registrar)
+        {
+            if (CryptoSuite == null) // set in cstr
+                                     // customize later with proper exceptions
+                throw new Exception("Crypto primitives not set");
+
+            if (registrationRequest == null) // ask for enrollmentID after the interface have been defined
+                throw new ArgumentException("Enrollment id not set in registration request");
+
+            if (registrar == null)
+                throw new ArgumentException("Registrar should be a valid member");
+
+            setUpSSL();
+
+            try
+            {
+                string body = registrationRequest.ToJson();
+                // validate if is neccessary to add token
+                JsonObject response = HttpPost(url + HFCA_REGISTER, body, registrar);
+                string secret = response["secret"]?.GetValue<string>();
+
+                if (secret == null)
+                    throw new Exception("Secret not found in response");
+
+                return secret;
+            }
+            catch (Exception exc)
+            {
+                throw new Exception("Error while registrating the user {registrar.Name} with url: {url}", exc);
+            }
+        }
+
+        /// <summary>
+        /// Revoke an identity
+        /// </summary>
+        public void Revoke() { }
+    }
 }
