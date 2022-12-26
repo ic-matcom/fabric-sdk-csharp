@@ -18,18 +18,18 @@ namespace FabricCaClient
         private static readonly string HFCA_REGISTER = HFCA_CONTEXT_ROOT + "register";
         
         /// <summary>
-        /// Enroll an identity
+        /// Enrolls an identity
         /// </summary>
         /// /// <param name="x"></param>
         /// <returns></returns>
         public void Enroll() { }
 
         /// <summary>
-        /// Reenroll an identity
+        /// Reenrolls an identity
         /// </summary>
         public void Reenroll() { }
 
-        private void setUpSSL() { 
+        private void SetUpSSL() { 
             throw new NotImplementedException();
         }
 
@@ -40,7 +40,7 @@ namespace FabricCaClient
         }
 
         /// <summary>
-        /// Register an identity
+        /// Registers an identity
         /// </summary>
         /// /// <param name="x"></param>
         /// <returns></returns>
@@ -56,7 +56,7 @@ namespace FabricCaClient
             if (registrar == null)
                 throw new ArgumentException("Registrar should be a valid member");
 
-            setUpSSL();
+            SetUpSSL();
 
             try
             {
@@ -77,7 +77,7 @@ namespace FabricCaClient
         }
 
         /// <summary>
-        /// Revoke an identity
+        /// Revokes an identity
         /// </summary>
         public void Revoke() { }
     }
