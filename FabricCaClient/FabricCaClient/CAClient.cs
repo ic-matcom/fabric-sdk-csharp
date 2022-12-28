@@ -1,7 +1,9 @@
 ﻿
 using FabricCaClient.HFBasicTypes;
 using Microsoft.Win32;
+using System.Linq;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 namespace FabricCaClient
 {
@@ -19,6 +21,7 @@ namespace FabricCaClient
         private CryptoPrimitives cryptoPrimitives;
         private bool isSSL;
         private Properties properties;
+        private KeyStore caStore;
 
         /// <summary>
         /// Enrolls an identity
@@ -33,19 +36,62 @@ namespace FabricCaClient
         public void Reenroll() { }
 
         private void SetUpSSL() {
-            if (cryptoPrimitives == null) {
+            // basically what is done here is the setting of the caStore
+            //if (cryptoPrimitives == null) {
+            //    try {
+            //        cryptoPrimitives = new CryptoPrimitives();
+            //        cryptoPrimitives.init();
+            //    }
+            //    catch (Exception exc) {
+            //        throw new Exception("Error while setting crypto primitives", exc);
+            //    }
+            //}
+
+            if (CryptoSuite == null) {
                 try {
-                    cryptoPrimitives = new CryptoPrimitives();
-                    cryptoPrimitives.init();
+                    CryptoSuite = Factory.GetCryptoSuite();
                 }
                 catch (Exception exc) {
-                    throw new Exception("Error while setting crypto primitives", exc);
+                    throw new Exception(exc.Message, exc);
                 }
             }
 
-            if (isSSL && registry == null) {
-                if( !properties.Contains("pemBytes") && !properties.Contains("pemFile"){
-                    byte [] permbytes = (byte[])
+            //if (isSSL == null && registry == null) {
+            //if (!properties.Contains("pemBytes") && !properties.Contains("pemFile"){
+            //    byte[] permbytes = (byte[])
+            //    }
+            //}
+            if (isSSL && caStore == null) {
+                if ( !properties.Contains("pemBytes") && !properties.Contains("pemFile")){
+                    Console.WriteLine("SSL with no CA certificates in either pemBytes or pemFile");
+                }
+
+                try {
+                    if (properties.Contains("pemBytes"))
+                        CryptoSuite.Store.AddCertificate(properties["pemBytes"]);
+                    if (properties.Contains("pemFile")) {
+                        string pemFile = properties["pemFile"];
+                        if (!string.IsNullOrEmpty(pemFile)) {
+                            Regex pattern = new Regex("[ \t]*,[ \t]*");
+                            string[] pems = pattern.Split(pemFile);
+                            foreach (string pem in pems) {
+                                if (!string.IsNullOrEmpty(pem)) {
+                                    string fname = Path.GetFullPath(pem);
+                                    try {
+                                        CryptoSuite.Store.AddCertificate(File.ReadAllText(fname));
+                                    }
+                                    catch (IOException) {
+                                        throw new Exception($"Unable to add cetificate, can't open certificate file {pem}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    caStore = CryptoSuite.Store;
+                }
+                catch( Exception exc) {
+                    Console.WriteLine(exc.Message);
+                    throw new Exception(exc.Message, exc);
                 }
             }
             // socket stuff. some funcitonalities are provided to java by apache. Alternatives need to be found for c#

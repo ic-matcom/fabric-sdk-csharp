@@ -54,6 +54,10 @@ namespace FabricCaClient.HFBasicTypes
             throw new NotImplementedException();
         }
 
+        internal void Set(object sECURITY_LEVEL, object value) {
+            throw new NotImplementedException();
+        }
+
         IEnumerator IEnumerable.GetEnumerator() {
             throw new NotImplementedException();
         }
