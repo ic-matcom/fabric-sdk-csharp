@@ -1,5 +1,6 @@
 ﻿
 using FabricCaClient.HFBasicTypes;
+using Microsoft.Win32;
 using System.Text.Json.Nodes;
 
 namespace FabricCaClient
@@ -7,8 +8,7 @@ namespace FabricCaClient
     /// <summary>
     ///  A class that encapsulates a set of methods to communicate with Hyperledger Fabric (HF)'s Certificate Authority (CA).
     /// </summary>
-    public class CAClient
-    {
+    public class CAClient {
         public ICryptoSuite CryptoSuite { get; set; }
 
         public static readonly string HFCA_CONTEXT_ROOT = "/api/v1/";
@@ -16,7 +16,10 @@ namespace FabricCaClient
         private readonly string url; // find a more suitable name
 
         private static readonly string HFCA_REGISTER = HFCA_CONTEXT_ROOT + "register";
-        
+        private CryptoPrimitives cryptoPrimitives;
+        private bool isSSL;
+        private Properties properties;
+
         /// <summary>
         /// Enrolls an identity
         /// </summary>
@@ -29,12 +32,26 @@ namespace FabricCaClient
         /// </summary>
         public void Reenroll() { }
 
-        private void SetUpSSL() { 
-            throw new NotImplementedException();
+        private void SetUpSSL() {
+            if (cryptoPrimitives == null) {
+                try {
+                    cryptoPrimitives = new CryptoPrimitives();
+                    cryptoPrimitives.init();
+                }
+                catch (Exception exc) {
+                    throw new Exception("Error while setting crypto primitives", exc);
+                }
+            }
+
+            if (isSSL && registry == null) {
+                if( !properties.Contains("pemBytes") && !properties.Contains("pemFile"){
+                    byte [] permbytes = (byte[])
+                }
+            }
+            // socket stuff. some funcitonalities are provided to java by apache. Alternatives need to be found for c#
         }
 
-        private JsonObject HttpPost(string url, string body, IUser registrar)
-        {
+        private JsonObject HttpPost(string url, string body, IUser registrar) {
             throw new NotImplementedException();
             return new JsonObject();
         }
@@ -44,8 +61,7 @@ namespace FabricCaClient
         /// </summary>
         /// /// <param name="x"></param>
         /// <returns></returns>
-        public string Register(RegistrationRequest registrationRequest, IUser registrar)
-        {
+        public string Register(RegistrationRequest registrationRequest, IUser registrar) {
             if (CryptoSuite == null) // set in cstr
                                      // customize later with proper exceptions
                 throw new Exception("Crypto primitives not set");
@@ -58,8 +74,7 @@ namespace FabricCaClient
 
             SetUpSSL();
 
-            try
-            {
+            try {
                 string body = registrationRequest.ToJson();
                 // validate if is neccessary to add token
                 JsonObject response = HttpPost(url + HFCA_REGISTER, body, registrar);
@@ -70,9 +85,8 @@ namespace FabricCaClient
 
                 return secret;
             }
-            catch (Exception exc)
-            {
-                throw new Exception("Error while registrating the user {registrar.Name} with url: {url}", exc);
+            catch (Exception exc) {
+                throw new Exception("Error while registering the user {registrar.Name} with url: {url}", exc);
             }
         }
 
