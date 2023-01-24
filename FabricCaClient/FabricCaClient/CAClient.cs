@@ -36,7 +36,9 @@ namespace FabricCaClient
         public void Reenroll() { }
 
         private void SetUpSSL() {
-            // basically what is done here is the setting of the caStore
+            // basically what is done here is the setting of the caStore (adding basic certificates
+            //this value is assigned the one of cryptoSuite.Store
+
             //if (cryptoPrimitives == null) {
             //    try {
             //        cryptoPrimitives = new CryptoPrimitives();

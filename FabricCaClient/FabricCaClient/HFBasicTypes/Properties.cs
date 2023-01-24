@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace FabricCaClient.HFBasicTypes
 {
-    internal class Properties : IDictionary<string, string> {
+    public class Properties : IDictionary<string, string> {
         public string this[string key] { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         public ICollection<string> Keys => throw new NotImplementedException();

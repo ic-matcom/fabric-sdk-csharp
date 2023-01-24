@@ -1,6 +1,7 @@
 ﻿namespace FabricCaClient.HFBasicTypes
 {
-    internal class KeyStore
+    public class KeyStore
     {
+
     }
 }

@@ -1,5 +1,8 @@
 ﻿namespace FabricCaClient.HFBasicTypes {
-    internal interface ICryptoSuiteFactory {
+    /// <summary>
+    /// Factory to produce a set of crypto suite implementations with different cryptographic algorithms and strengths.
+    /// </summary>
+    public interface ICryptoSuiteFactory {
         /// <summary>
         /// Produces a Crypto Suite with no specifications.
         /// </summary>
