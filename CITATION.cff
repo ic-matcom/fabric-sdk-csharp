@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Martinez"
+  given-names: "Gabriela"
+  orcid: "https://orcid.org/0000-0000-0000-0000"
+- family-names: "Gonzalez"
+  given-names: "Camilo"
+  orcid: "https://orcid.org/0000-0000-0000-0000"
+title: "fabric-ca-client-sdk-charp"
+version: 2.0.4
+doi: 10.5281/zenodo.1234
+date-released: 2023-01-31
+url: "https://github.com/ic-matcom/fabric-sdk-csharp"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Martinez"
+    given-names: "Gabriela"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+  - family-names: "Gonzalez"
+    given-names: "Camilo"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+  doi: "10.0000/00000"
+  journal: "Journal Title"
+  month: 1
+  start: 1 # First page number
+  end: 10 # Last page number
+  title: "Módulo fabric-ca-client del fabric-sdk-csharp para generar identidades criptográficas con CSharp."
+  issue: 1
+  volume: 1
+  year: 2023
