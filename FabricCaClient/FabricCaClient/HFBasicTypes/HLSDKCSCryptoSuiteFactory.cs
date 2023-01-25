@@ -3,6 +3,9 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 
 namespace FabricCaClient.HFBasicTypes {
+    /// <summary>
+    /// SDK's Default implementation of ICryptoSuiteFactory
+    /// </summary>
     internal class HLSDKCSCryptoSuiteFactory : ICryptoSuiteFactory {
         private static readonly ConcurrentDictionary<Properties, ICryptoSuite> cache = new ConcurrentDictionary<Properties, ICryptoSuite>();
         private readonly string HASH_ALGORITHM = Config.Instance.GetHashAlgorithm();
