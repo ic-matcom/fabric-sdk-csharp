@@ -11,6 +11,9 @@ namespace FabricCaClient.HFBasicTypes {
         private readonly string HASH_ALGORITHM = Config.Instance.GetHashAlgorithm();
         private readonly int SECURITY_LEVEL = Config.Instance.GetSecurityLevel();
 
+        internal static ICryptoSuiteFactory getDefault() {
+            throw new NotImplementedException();
+        }
 
         public ICryptoSuite GetCryptoSuite() {
             Properties properties = new Properties();
@@ -57,6 +60,10 @@ namespace FabricCaClient.HFBasicTypes {
             }
 
             return ret;
+        }
+
+        ICryptoSuite ICryptoSuiteFactory.GetCryptoSuite(Properties properties) {
+            throw new NotImplementedException();
         }
     }
 }
