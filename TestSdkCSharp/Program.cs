@@ -2,9 +2,11 @@
 
 namespace TestSdkCSharp {
     internal class Program {
-        static void Main(string[] args) {
-            CAClient a = new CAClient();
+        static async Task Main(string[] args) {
+            CAClient caclient = new CAClient();
             Console.WriteLine("Intialized");
+            var jsonResponse = await caclient.GetCaInfo();
+            Console.WriteLine($"{jsonResponse}\n");
         }
     }
 }
