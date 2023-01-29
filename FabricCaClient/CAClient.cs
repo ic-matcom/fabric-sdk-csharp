@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.IO;
 using System.Net;
+using Microsoft.Win32;
+using System.Runtime.ConstrainedExecution;
 
 namespace FabricCaClient {
     /// <summary>
@@ -60,8 +62,14 @@ namespace FabricCaClient {
         /// <summary>
         /// Enrolls an identity
         /// </summary>
-        /// /// <param name="x"></param>
-        /// <returns></returns>
+        /// <param name="enrollmentId"></param>
+        /// <param name="enrollmentSecret"></param>
+        /// <param name="csr"></param>
+        /// <param name="profile"></param>
+        /// <param name="attrRqs"></param>
+        /// <returns>A tuple containing a signed pem certificate and a string with caChain</returns>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="Exception"></exception>
         public async Task<Tuple<string, string>> Enroll(string enrollmentId, string enrollmentSecret, string csr, string profile = "", string attrRqs = "") {
             if (enrollmentId == "" || enrollmentSecret == "" || csr == "")
                 throw new ArgumentException($"Missing required parameters: enrollmentId-{enrollmentId}, enrollmentSecret-{enrollmentSecret} and csr-{csr} are all required");
@@ -75,8 +83,9 @@ namespace FabricCaClient {
             //    });
 
             // adding this values only if not null
-            JObject jsonBody = new JObject();
-            jsonBody.Add(new JProperty("csr", csr));
+            JObject jsonBody = new JObject {
+                new JProperty("csr", csr)
+            };
             if (profile != "")
                 jsonBody.Add(new JProperty("profile", profile));
             if (attrRqs != "")// attrRqs should already be a JArray of JObjects
@@ -84,6 +93,7 @@ namespace FabricCaClient {
 
             // get the result field which is Base64-encoded PEM
 
+            // check verify flag
             var jsonResponse =  await PostAsync(CA_URL_ENROLL, jsonBody.ToString(Formatting.None), enrollmentId, enrollmentSecret);
 
             JObject jsonst = JObject.Parse(jsonResponse);
@@ -101,28 +111,100 @@ namespace FabricCaClient {
                     }
                 }
                 catch (Exception exc){
-                    throw (new Exception("Error in enrollmente request"), exc);
+                    throw new Exception("Error in enrollment request", exc);
                 }
-                }
-            throw(new Exception("Error in enrollmente request"));
+            }
+            throw(new Exception("Error in enrollment request"));
         }
 
         /// <summary>
         /// Reenrolls an identity
         /// </summary>
-        /// <param name="enrollmentId"></param>
-        /// <param name="enrollmentSecret"></param>
+        /// <param name="registrar"></param>
+        /// <param name="csr"></param>
+        /// <param name="attrRqs"></param>
         /// <returns></returns>
-        public async Task<string> Reenroll(string enrollmentId = "", string enrollmentSecret = "") {
-            return await PostAsync(CA_URL_REENROLL, "");
+        /// <exception cref="Exception"></exception>
+        public async Task<Tuple<string, string>> Reenroll(Enrollment registrar, string csr, string attrRqs = "") {
+            JObject jsonBody = new JObject {
+                new JProperty("csr", csr)
+            };
+            if (attrRqs != "")// attrRqs should already be a JArray of JObjects
+                jsonBody.Add(new JProperty("attr_reqs", attrRqs));
+
+            // get the result field which is Base64-encoded PEM
+
+            // check verify flag
+            var jsonResponse = await PostAsync(CA_URL_REENROLL, jsonBody.ToString(Formatting.None), registrar);
+
+            JObject jsonst = JObject.Parse(jsonResponse);
+            bool success = jsonst["success"]?.Value<bool>() ?? false;
+            if (success) {
+                try {
+                    JObject result = jsonst["result"] as JObject;
+                    if (result != null) {
+                        //verify following converison as ToUTF8String() is no longer available and was substituted by toString
+                        string signedPem = Convert.FromBase64String(result["Cert"]?.Value<string>() ?? "").ToString();
+                        //los dos deben ser convertidos
+                        string caChain = result.SelectToken("ServerInfo.CertCAChain").Value<string>();
+                        return new Tuple<string, string>(signedPem, caChain);// CAChain too
+                    }
+                }
+                catch (Exception exc) {
+                    throw new Exception("Error in reenrollmente request", exc);
+                }
+            }
+            throw (new Exception("Error in reenrollment request"));
         }
 
         /// <summary>
         /// Registers an identity
         /// </summary>
+        /// <param name="enrollmentId"></param>
+        /// <param name="enrollmentSecret"></param>
+        /// <param name="maxEnrollments"></param>
+        /// <param name="attrs"></param>
+        /// <param name="registrar"></param>
+        /// <param name="role"></param>
+        /// <param name="affiliatiton"></param>
         /// <returns></returns>
-        public async Task<string> Register(string enrollmentId = "", string enrollmentSecret = "") {
-            return await PostAsync(CA_URL_REGISTER, "");
+        /// <exception cref="Exception"></exception>
+        public async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, string attrs, Enrollment registrar, string role = "", string affiliatiton="") {
+            JObject jsonBody = new JObject {
+                new JProperty("id", enrollmentId),
+                new JProperty("affiliation", affiliatiton),
+                new JProperty("max_enrollments", maxEnrollments),
+
+            };
+
+            if (role != "")
+                jsonBody.Add(new JProperty("type", role));
+            if (attrs != "")// attrs should already be a JArray of JObjects
+                jsonBody.Add(new JProperty("attrs", attrs));
+            if (enrollmentSecret != "")
+                jsonBody.Add(new JProperty("secret", enrollmentSecret));
+
+            // get the result field which is Base64-encoded PEM
+
+            // check verify flag
+            var jsonResponse = await PostAsync(CA_URL_REGISTER, jsonBody.ToString(Formatting.None), registrar);
+
+            JObject jsonst = JObject.Parse(jsonResponse);
+            bool success = jsonst["success"]?.Value<bool>() ?? false;
+            if (success) {
+                try {
+                    JObject result = jsonst["result"] as JObject;
+                    if (result != null) {
+                        //verify following converison
+                        string secret = result["secret"]?.Value<string>();
+                        return secret;
+                    }
+                }
+                catch (Exception exc) {
+                    throw new Exception("Error in register request", exc);
+                }
+            }
+            throw (new Exception("Error in register request"));
         }
 
         /// <summary>
@@ -166,8 +248,12 @@ namespace FabricCaClient {
             request.Content = new StringContent(content, Encoding.UTF8);
 
             if (idx != "" && pass != "")
-                request.Headers.Authorization = new AuthenticationHeaderValue(idx, pass);
-
+                request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes(idx + ":" + pass)));
+            // check correct format for AuthenticationHeaderValue
+            //request.DefaultRequestHeaders.Authorization =
+            //new AuthenticationHeaderValue("Basic", Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{idx}:{pass}")));
+            //new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{idx}:{pass}")));
+            
             HttpResponseMessage response = await sharedClient.SendAsync(request);
 
             response.EnsureSuccessStatusCode();
@@ -177,36 +263,26 @@ namespace FabricCaClient {
             return jsonResponse;
         }
 
-        public async Task<HFCAInfo> InfoAsync(CancellationToken token = default(CancellationToken)) {
-            try {
-                JObject body = new JObject();
-                if (CAName != null)
-                    body.Add(new JProperty(FABRIC_CA_REQPROP, CAName));
-                string responseBody = await PostAsync(CA_URL_INFO, body.ToString(), (NetworkCredential)null, token).ConfigureAwait(false);
-                logger.Debug("response:" + responseBody);
-                JObject jsonst = JObject.Parse(responseBody);
-                bool success = jsonst["success"]?.Value<bool>() ?? false;
-                logger.Debug($"[HFCAClient] enroll success:[{success}]");
-                if (!success)
-                    throw new EnrollmentException($"FabricCA failed info {url}");
-                JObject result = jsonst["result"] as JObject;
-                if (result == null)
-                    throw new InfoException($"FabricCA info error  - response did not contain a result url {url}");
-                string caName = result["CAName"]?.Value<string>();
-                string caChain = result["CAChain"]?.Value<string>();
-                string version = null;
-                if (result.ContainsKey("Version"))
-                    version = result["Version"].Value<string>();
-                string issuerPublicKey = result["IssuerPublicKey"]?.Value<string>();
-                string issuerRevocationPublicKey = result["IssuerRevocationPublicKey"]?.Value<string>();
-                logger.Info($"CA Name: {caName}, Version: {caChain}, issuerPublicKey: {issuerPublicKey}, issuerRevocationPublicKey: {issuerRevocationPublicKey}");
-                return new HFCAInfo(caName, caChain, version, issuerPublicKey, issuerRevocationPublicKey);
-            }
-            catch (Exception e) {
-                InfoException ee = new InfoException($"Url:{url}, Failed to get info", e);
-                logger.ErrorException(e.Message, e);
-                throw ee;
-            }
+        private async Task<string> PostAsync(string url, string content, Enrollment registrar) {
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
+
+            request.Content = new StringContent(content, Encoding.UTF8);
+
+            if (registrar != null)
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", generateAuthToken(registrar, content));
+            // check token value type and Bearer spec
+            //request.Headers.TryAddWithoutValidation("Authorization", generateAuthTokenResult);
+
+            HttpResponseMessage response = await sharedClient.SendAsync(request);
+
+            response.EnsureSuccessStatusCode();
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            return jsonResponse;
+        }
+
+        private string? generateAuthToken(Enrollment registrar, string content) {
+            throw new NotImplementedException();
         }
     }
 }
