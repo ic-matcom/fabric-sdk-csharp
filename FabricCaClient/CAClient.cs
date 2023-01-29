@@ -11,6 +11,8 @@ using System.Runtime;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using System.IO;
+using System.Net;
 
 namespace FabricCaClient {
     /// <summary>
@@ -60,7 +62,7 @@ namespace FabricCaClient {
         /// </summary>
         /// /// <param name="x"></param>
         /// <returns></returns>
-        public async Task<string> Enroll(string enrollmentId, string enrollmentSecret, string csr, string profile = "", string attrRqs = "") {
+        public async Task<Tuple<string, string>> Enroll(string enrollmentId, string enrollmentSecret, string csr, string profile = "", string attrRqs = "") {
             if (enrollmentId == "" || enrollmentSecret == "" || csr == "")
                 throw new ArgumentException($"Missing required parameters: enrollmentId-{enrollmentId}, enrollmentSecret-{enrollmentSecret} and csr-{csr} are all required");
 
@@ -87,14 +89,22 @@ namespace FabricCaClient {
             JObject jsonst = JObject.Parse(jsonResponse);
             bool success = jsonst["success"]?.Value<bool>() ?? false;
             if (success) {
-                JObject result = jsonst["result"] as JObject;
-                if (result != null) {
-                    //verify following converison as ToUTF8String() is no longer available and was substituted by toString
-                    string signedPem = Convert.FromBase64String(result["Cert"]?.Value<string>() ?? "").ToString();
-                    return signedPem;// CAChain too
+                //var data = (JObject)JsonConvert.DeserializeObject(jsonResponse);
+                //var signedPem = data.SelectToken("result.Cert").Value<string>();
+                try {
+                    JObject result = jsonst["result"] as JObject;
+                    if (result != null) {
+                        //verify following converison as ToUTF8String() is no longer available and was substituted by toString
+                        string signedPem = Convert.FromBase64String(result["Cert"]?.Value<string>() ?? "").ToString();
+                        string caChain = result["CAChain"]?.Value<string>();
+                        return new Tuple<string, string>(signedPem, caChain);// CAChain too
+                    }
                 }
-            }
-            return "Error in enrollmente request";
+                catch (Exception exc){
+                    throw (new Exception("Error in enrollmente request"), exc);
+                }
+                }
+            throw(new Exception("Error in enrollmente request"));
         }
 
         /// <summary>
@@ -132,6 +142,7 @@ namespace FabricCaClient {
             var jsonResponse = await response.Content.ReadAsStringAsync();
             return jsonResponse;
         }
+
         //static async Task<string> PostAsync(string url, JsonContent content, string idx = "", string pass = "") {
         //    HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
 
@@ -164,6 +175,38 @@ namespace FabricCaClient {
             //deserialize
             var jsonResponse = await response.Content.ReadAsStringAsync();
             return jsonResponse;
+        }
+
+        public async Task<HFCAInfo> InfoAsync(CancellationToken token = default(CancellationToken)) {
+            try {
+                JObject body = new JObject();
+                if (CAName != null)
+                    body.Add(new JProperty(FABRIC_CA_REQPROP, CAName));
+                string responseBody = await PostAsync(CA_URL_INFO, body.ToString(), (NetworkCredential)null, token).ConfigureAwait(false);
+                logger.Debug("response:" + responseBody);
+                JObject jsonst = JObject.Parse(responseBody);
+                bool success = jsonst["success"]?.Value<bool>() ?? false;
+                logger.Debug($"[HFCAClient] enroll success:[{success}]");
+                if (!success)
+                    throw new EnrollmentException($"FabricCA failed info {url}");
+                JObject result = jsonst["result"] as JObject;
+                if (result == null)
+                    throw new InfoException($"FabricCA info error  - response did not contain a result url {url}");
+                string caName = result["CAName"]?.Value<string>();
+                string caChain = result["CAChain"]?.Value<string>();
+                string version = null;
+                if (result.ContainsKey("Version"))
+                    version = result["Version"].Value<string>();
+                string issuerPublicKey = result["IssuerPublicKey"]?.Value<string>();
+                string issuerRevocationPublicKey = result["IssuerRevocationPublicKey"]?.Value<string>();
+                logger.Info($"CA Name: {caName}, Version: {caChain}, issuerPublicKey: {issuerPublicKey}, issuerRevocationPublicKey: {issuerRevocationPublicKey}");
+                return new HFCAInfo(caName, caChain, version, issuerPublicKey, issuerRevocationPublicKey);
+            }
+            catch (Exception e) {
+                InfoException ee = new InfoException($"Url:{url}, Failed to get info", e);
+                logger.ErrorException(e.Message, e);
+                throw ee;
+            }
         }
     }
 }
