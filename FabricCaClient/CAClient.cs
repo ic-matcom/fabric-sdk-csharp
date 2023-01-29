@@ -15,6 +15,7 @@ using System.IO;
 using System.Net;
 using Microsoft.Win32;
 using System.Runtime.ConstrainedExecution;
+using System.Data;
 
 namespace FabricCaClient {
     /// <summary>
@@ -26,7 +27,7 @@ namespace FabricCaClient {
         private static readonly string DEFAULT_CA_BASE_URL = "/api/v1/";
 
         private static readonly string CA_URL_ENROLL = "enroll";
-        private static readonly string CA_URL_REGISTER =  "register";
+        private static readonly string CA_URL_REGISTER = "register";
         private static readonly string CA_URL_REENROLL = "reenroll";
         private static readonly string CA_URL_REVOKE = "revoke";
         private static readonly string CA_URL_INFO = "cainfo";
@@ -94,7 +95,7 @@ namespace FabricCaClient {
             // get the result field which is Base64-encoded PEM
 
             // check verify flag
-            var jsonResponse =  await PostAsync(CA_URL_ENROLL, jsonBody.ToString(Formatting.None), enrollmentId, enrollmentSecret);
+            var jsonResponse = await PostAsync(CA_URL_ENROLL, jsonBody.ToString(Formatting.None), enrollmentId, enrollmentSecret);
 
             JObject jsonst = JObject.Parse(jsonResponse);
             bool success = jsonst["success"]?.Value<bool>() ?? false;
@@ -110,11 +111,11 @@ namespace FabricCaClient {
                         return new Tuple<string, string>(signedPem, caChain);// CAChain too
                     }
                 }
-                catch (Exception exc){
+                catch (Exception exc) {
                     throw new Exception("Error in enrollment request", exc);
                 }
             }
-            throw(new Exception("Error in enrollment request"));
+            throw (new Exception("Error in enrollment request"));
         }
 
         /// <summary>
@@ -169,7 +170,7 @@ namespace FabricCaClient {
         /// <param name="affiliatiton"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, string attrs, Enrollment registrar, string role = "", string affiliatiton="") {
+        public async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, string attrs, Enrollment registrar, string role = "", string affiliatiton = "") {
             JObject jsonBody = new JObject {
                 new JProperty("id", enrollmentId),
                 new JProperty("affiliation", affiliatiton),
@@ -210,9 +211,46 @@ namespace FabricCaClient {
         /// <summary>
         /// Revokes an identity
         /// </summary>
+        /// <param name="enrollmentId"></param>
+        /// <param name="aki"></param>
+        /// <param name="serial"></param>
+        /// <param name="reason"></param>
+        /// <param name="genCrl"></param>
+        /// <param name="registrar"></param>
         /// <returns></returns>
-        public async Task<string> Revoke() {
-            return await PostAsync(CA_URL_REVOKE, "");
+        /// <exception cref="Exception"></exception>
+        public async Task<Tuple<string, string>> Revoke(string enrollmentId, string aki, string serial, string reason, bool genCrl, Enrollment registrar) {
+            JObject jsonBody = new JObject {
+                new JProperty("id", enrollmentId),
+                new JProperty("aki", aki),
+                new JProperty("serial", serial),
+                new JProperty("reason", reason),
+                new JProperty("gencrl", genCrl),
+            };
+
+            // get the result field which is Base64-encoded PEM
+
+            // check verify flag and caclient attr
+            var jsonResponse = await PostAsync(CA_URL_REVOKE, jsonBody.ToString(Formatting.None), registrar);
+
+            JObject jsonst = JObject.Parse(jsonResponse);
+            bool success = jsonst["success"]?.Value<bool>() ?? false;
+            if (success) {
+                try {
+                    JObject result = jsonst["result"] as JObject;
+                    if (result != null) {
+                        //verify following converison
+                        string revokedCerts = result["RevokedCerts"]?.Value<string>();
+                        string crl = result["CRL"]?.Value<string>();
+                        // consider returning just the crl if asked
+                        return new Tuple<string, string>(revokedCerts, crl);
+                    }
+                }
+                catch (Exception exc) {
+                    throw new Exception("Error in revoke request", exc);
+                }
+            }
+            throw (new Exception("Error in revoke request"));
         }
 
         static async Task<string> GetAsync(string url) {
@@ -253,7 +291,7 @@ namespace FabricCaClient {
             //request.DefaultRequestHeaders.Authorization =
             //new AuthenticationHeaderValue("Basic", Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{idx}:{pass}")));
             //new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{idx}:{pass}")));
-            
+
             HttpResponseMessage response = await sharedClient.SendAsync(request);
 
             response.EnsureSuccessStatusCode();
