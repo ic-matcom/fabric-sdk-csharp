@@ -22,7 +22,7 @@ namespace FabricCaClient {
 
         // HttpClient lifecycle management best practices:
         // https://learn.microsoft.com/dotnet/fundamentals/networking/http/httpclient-guidelines#recommended-use
-        // give error with ssl
+        // returns error with ssl
         private static HttpClient sharedClient;
 
         public CAClient(string caEnpoint = "") {
