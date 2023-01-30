@@ -16,6 +16,7 @@ using System.Net;
 using Microsoft.Win32;
 using System.Runtime.ConstrainedExecution;
 using System.Data;
+using System.Runtime.CompilerServices;
 
 namespace FabricCaClient {
     /// <summary>
@@ -24,8 +25,8 @@ namespace FabricCaClient {
     public class CAClient {
         // The available paths and operations for the API as described in https://github.com/hyperledger/fabric-ca/blob/main/swagger/swagger-fabric-ca.json.
         private static string DEFAULT_CA_ENDPOINT = "http://localhost:7054";
-        private static readonly string DEFAULT_CA_BASE_URL = "/api/v1/";
-
+        private static string DEFAULT_CA_BASE_URL = "/api/v1/";
+        
         private static readonly string CA_URL_ENROLL = "enroll";
         private static readonly string CA_URL_REGISTER = "register";
         private static readonly string CA_URL_REENROLL = "reenroll";
@@ -35,15 +36,34 @@ namespace FabricCaClient {
         private static readonly string CA_URL_CERTIFICATE = "certificates";
         private static readonly string CA_URL_IDEMIXCRED = "idemix/credential";
 
+        private string caName;
+        private CryptoPrimitives cryptoPrimitives;
+        private string caCertsPath;
+
         // HttpClient lifecycle management best practices:
         // https://learn.microsoft.com/dotnet/fundamentals/networking/http/httpclient-guidelines#recommended-use
         // returns error with ssl
         private static HttpClient sharedClient;
 
-        public CAClient(string caEnpoint = "") {
+        /// <summary>
+        /// Cosntructor for CAClient class
+        /// </summary>
+        /// <param name="cryptoPrim"></param>
+        /// <param name="caEnpoint"></param>
+        /// <param name="baseUrl"></param>
+        /// <param name="_caCertsPath"></param>
+        /// <param name="_caName"></param>
+        public CAClient(CryptoPrimitives cryptoPrim, string caEnpoint = "", string baseUrl = "", string _caCertsPath = "", string _caName= "") {
+            cryptoPrimitives = cryptoPrim;
+            
             if (caEnpoint != "")
                 DEFAULT_CA_ENDPOINT = caEnpoint;
+            if (baseUrl != "")
+                DEFAULT_CA_BASE_URL = caEnpoint;
 
+            caCertsPath = _caCertsPath;
+            caName = _caName;
+            
             var handler = new SocketsHttpHandler {
                 PooledConnectionLifetime = TimeSpan.FromMinutes(15) // Recreate every 15 minutes
             };
