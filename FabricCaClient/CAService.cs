@@ -85,15 +85,32 @@ namespace FabricCaClient {
         /// <summary>
         /// Registers an identity
         /// </summary>
+        /// <param name="enrollmentId"></param>
+        /// <param name="enrollmentSecret"></param>
+        /// <param name="maxEnrollments"></param>
+        /// <param name="attrs"></param>
+        /// <param name="registrar"></param>
+        /// <param name="role"></param>
+        /// <param name="affiliatiton"></param>
+        /// <returns></returns>
         public async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, string attrs, Enrollment registrar, string role = "", string affiliatiton = "") {
-            throw new NotImplementedException();
+            // check enrollmentScret is no ""
+            return await caClient.Register(enrollmentId, enrollmentSecret, maxEnrollments, attrs, registrar, role, affiliatiton);
         }
 
         /// <summary>
         /// Revokes an identity
         /// </summary>
+        /// <param name="enrollmentId"></param>
+        /// <param name="aki"></param>
+        /// <param name="serial"></param>
+        /// <param name="reason"></param>
+        /// <param name="genCrl"></param>
+        /// <param name="registrar"></param>
+        /// <returns></returns>
         public async Task<Tuple<string, string>> Revoke(string enrollmentId, string aki, string serial, string reason, bool genCrl, Enrollment registrar) {
-            throw new NotImplementedException();
+            // check ca name
+            return await caClient.Revoke(enrollmentId, aki, serial, reason, genCrl, registrar);
         }
     }
 
