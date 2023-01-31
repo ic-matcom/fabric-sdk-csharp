@@ -24,17 +24,17 @@ namespace FabricCaClient {
     /// </summary>
     public class CAClient {
         // The available paths and operations for the API as described in https://github.com/hyperledger/fabric-ca/blob/main/swagger/swagger-fabric-ca.json.
-        private static string DEFAULT_CA_ENDPOINT = "http://localhost:7054";
-        private static string DEFAULT_CA_BASE_URL = "/api/v1/";
+        private static string defaultCaEndpoint = "http://localhost:7054";
+        private static string defaultCaBaseUrl= "/api/v1/";
         
-        private static readonly string CA_URL_ENROLL = "enroll";
-        private static readonly string CA_URL_REGISTER = "register";
-        private static readonly string CA_URL_REENROLL = "reenroll";
-        private static readonly string CA_URL_REVOKE = "revoke";
-        private static readonly string CA_URL_INFO = "cainfo";
-        private static readonly string CA_URL_GENCRL = "gencrl";
-        private static readonly string CA_URL_CERTIFICATE = "certificates";
-        private static readonly string CA_URL_IDEMIXCRED = "idemix/credential";
+        private static readonly string caUrlEnroll = "enroll";
+        private static readonly string caUrlRegister = "register";
+        private static readonly string caUrlReenroll = "reenroll";
+        private static readonly string caUrlRevoke = "revoke";
+        private static readonly string caUrlInfo = "cainfo";
+        private static readonly string caUrlGenCrl = "gencrl";
+        private static readonly string caUrlCertificate = "certificates";
+        private static readonly string caUrlIdemixCred = "idemix/credential";
 
         private string caName;
         private CryptoPrimitives cryptoPrimitives;
@@ -57,9 +57,9 @@ namespace FabricCaClient {
             cryptoPrimitives = cryptoPrim;
             
             if (caEnpoint != "")
-                DEFAULT_CA_ENDPOINT = caEnpoint;
+                defaultCaEndpoint = caEnpoint;
             if (baseUrl != "")
-                DEFAULT_CA_BASE_URL = caEnpoint;
+                defaultCaBaseUrl = caEnpoint;
 
             caCertsPath = _caCertsPath;
             caName = _caName;
@@ -68,7 +68,7 @@ namespace FabricCaClient {
                 PooledConnectionLifetime = TimeSpan.FromMinutes(15) // Recreate every 15 minutes
             };
             sharedClient = new HttpClient(handler) {
-                BaseAddress = new Uri(DEFAULT_CA_ENDPOINT + DEFAULT_CA_BASE_URL),
+                BaseAddress = new Uri(defaultCaEndpoint + defaultCaBaseUrl),
             };
         }
 
@@ -77,7 +77,7 @@ namespace FabricCaClient {
         /// </summary>
         /// <returns></returns>
         public async Task<string> GetCaInfo() {
-            return await GetAsync(CA_URL_INFO);
+            return await GetAsync(caUrlInfo);
         }
 
         /// <summary>
@@ -115,7 +115,7 @@ namespace FabricCaClient {
             // get the result field which is Base64-encoded PEM
 
             // check verify flag
-            var jsonResponse = await PostAsync(CA_URL_ENROLL, jsonBody.ToString(Formatting.None), enrollmentId, enrollmentSecret);
+            var jsonResponse = await PostAsync(caUrlEnroll, jsonBody.ToString(Formatting.None), enrollmentId, enrollmentSecret);
 
             JObject jsonst = JObject.Parse(jsonResponse);
             bool success = jsonst["success"]?.Value<bool>() ?? false;
@@ -156,7 +156,7 @@ namespace FabricCaClient {
             // get the result field which is Base64-encoded PEM
 
             // check verify flag
-            var jsonResponse = await PostAsync(CA_URL_REENROLL, jsonBody.ToString(Formatting.None), registrar);
+            var jsonResponse = await PostAsync(caUrlReenroll, jsonBody.ToString(Formatting.None), registrar);
 
             JObject jsonst = JObject.Parse(jsonResponse);
             bool success = jsonst["success"]?.Value<bool>() ?? false;
@@ -208,7 +208,7 @@ namespace FabricCaClient {
             // get the result field which is Base64-encoded PEM
 
             // check verify flag
-            var jsonResponse = await PostAsync(CA_URL_REGISTER, jsonBody.ToString(Formatting.None), registrar);
+            var jsonResponse = await PostAsync(caUrlRegister, jsonBody.ToString(Formatting.None), registrar);
 
             JObject jsonst = JObject.Parse(jsonResponse);
             bool success = jsonst["success"]?.Value<bool>() ?? false;
@@ -251,7 +251,7 @@ namespace FabricCaClient {
             // get the result field which is Base64-encoded PEM
 
             // check verify flag and caclient attr
-            var jsonResponse = await PostAsync(CA_URL_REVOKE, jsonBody.ToString(Formatting.None), registrar);
+            var jsonResponse = await PostAsync(caUrlRevoke, jsonBody.ToString(Formatting.None), registrar);
 
             JObject jsonst = JObject.Parse(jsonResponse);
             bool success = jsonst["success"]?.Value<bool>() ?? false;
