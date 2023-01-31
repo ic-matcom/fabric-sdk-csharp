@@ -10,7 +10,7 @@ namespace FabricCaClient {
     /// <summary>
     /// A class that serves as an interface to the CaClient that communicates with the CA
     /// </summary>
-    internal class CAService {
+    public class CAService {
         private CryptoPrimitives _cryptoPrimitives;
         private CAClient _caClient;
 

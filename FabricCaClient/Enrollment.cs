@@ -1,17 +1,15 @@
 ﻿namespace FabricCaClient {
     public class Enrollment {
-        private string privateKey;
-        private string item1;
-        private string item2;
-        private CAService cAService;
+        public string PrivateKey { get; private set; }
+        public string Cert { get; private set; }
+        public string CAChainCert { get; private set; }
+        public CAService CAService { get; private set; } // remove this item
 
-        public Enrollment(string privateKey, string item1, string item2, CAService cAService) {
-            this.privateKey = privateKey;
-            this.item1 = item1;
-            this.item2 = item2;
-            this.cAService = cAService;
+        public Enrollment(string privateKey, string cert, string caChainCert, CAService cAService) {
+            PrivateKey = privateKey;
+            Cert = cert;
+            CAChainCert = caChainCert;
+            CAService = cAService;
         }
-
-        public string Cert { get; internal set; }
     }
 }
