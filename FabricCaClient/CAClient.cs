@@ -17,8 +17,33 @@ using Microsoft.Win32;
 using System.Runtime.ConstrainedExecution;
 using System.Data;
 using System.Runtime.CompilerServices;
+using FabricCaClient.Crypto;
 
-namespace FabricCaClient {
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Asn1;
+using Org.BouncyCastle.Asn1.X509;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Security;
+using Org.BouncyCastle.Security.Certificates;
+
+
+namespace FabricCaClient
+{
     /// <summary>
     /// A class that encapsulates a set of methods to communicate with Hyperledger Fabric (HF)'s Certificate Authority (CA).
     /// </summary>
@@ -46,7 +71,7 @@ namespace FabricCaClient {
         private static HttpClient sharedClient;
 
         /// <summary>
-        /// Cosntructor for CAClient class
+        /// Constructor for CAClient class
         /// </summary>
         /// <param name="cryptoPrim"></param>
         /// <param name="caEnpoint"></param>
@@ -105,7 +130,7 @@ namespace FabricCaClient {
 
             // adding this values only if not null
             JObject jsonBody = new JObject {
-                new JProperty("csr", csr)
+                new JProperty("certificate_request", csr)
             };
             if (profile != "")
                 jsonBody.Add(new JProperty("profile", profile));
@@ -118,7 +143,7 @@ namespace FabricCaClient {
             var jsonResponse = await PostAsync(caUrlEnroll, jsonBody.ToString(Formatting.None), enrollmentId, enrollmentSecret);
 
             JObject jsonst = JObject.Parse(jsonResponse);
-            bool success = jsonst["success"]?.Value<bool>() ?? false;
+            bool success = jsonst["success"]?.Value<bool>() ?? false;            
             if (success) {
                 //var data = (JObject)JsonConvert.DeserializeObject(jsonResponse);
                 //var signedPem = data.SelectToken("result.Cert").Value<string>();
@@ -126,8 +151,16 @@ namespace FabricCaClient {
                     JObject result = jsonst["result"] as JObject;
                     if (result != null) {
                         //verify following converison as ToUTF8String() is no longer available and was substituted by toString
-                        string signedPem = Convert.FromBase64String(result["Cert"]?.Value<string>() ?? "").ToString();
-                        string caChain = result["CAChain"]?.Value<string>();
+                        //string signedPem = Convert.FromBase64String(result["Cert"]?.Value<string>() ?? "").ToString();
+                        
+                        string signedPem = Encoding.UTF8.GetString(Convert.FromBase64String(result["Cert"]?.Value<string>() ?? ""));
+                        //string signedPem = Convert.FromBase64String(result["Cert"]?.Value<string>() ?? "").ToUTF8String();
+                        
+                        string caChain = Encoding.UTF8.GetString(Convert.FromBase64String(result["ServerInfo"]["CAChain"]?.Value<string>() ?? ""));
+                        //string caChain = result["ServerInfo"]["CAChain"].Value<string>();
+                        //string caChain = result.SelectToken("ServerInfo.CertCAChain").Value<string>();
+                        //string caChain = (result["ServerInfo"] as JObject)["CAChain"].Value<string>();
+
                         return new Tuple<string, string>(signedPem, caChain);// CAChain too
                     }
                 }
@@ -318,6 +351,9 @@ namespace FabricCaClient {
 
             //deserialize
             var jsonResponse = await response.Content.ReadAsStringAsync();
+            Console.WriteLine("----Response----");
+            Console.WriteLine(jsonResponse);
+
             return jsonResponse;
         }
 

@@ -1,18 +1,27 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using FabricCaClient.Crypto;
+using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Crypto;
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FabricCaClient {
+namespace FabricCaClient
+{
     /// <summary>
     /// A class that serves as an interface to the CaClient that communicates with the CA
     /// </summary>
     public class CAService {
         private CryptoPrimitives _cryptoPrimitives;
         private CAClient _caClient;
+
+        // to test
+        public async Task<string> GetCaInfo() {
+            return await _caClient.GetCaInfo();
+        }
 
         /// <summary>
         /// Constructor for CAService class
@@ -43,24 +52,26 @@ namespace FabricCaClient {
         /// <param name="profile"></param>
         /// <param name="attrRqs"></param>
         /// <returns></returns>
-        public async Task<Enrollment> Enroll(string enrollmentId, string enrollmentSecret, string csr, string profile = "", string attrRqs = "") {
+        public async Task<Enrollment> Enroll(string enrollmentId, string enrollmentSecret, string csr = "", string profile = "", string attrRqs = "") {
             // this could be checked here    
             // if (enrollmentId == "" || enrollmentSecret == "" )
 
             // check attReqs format, is possible one need to reformat here to give the spected form
 
-            string privateKey = "";
+            AsymmetricCipherKeyPair keyPair;
             if (csr == "") {
-                // both methods below are still to ve implemented
-                privateKey = _cryptoPrimitives.GeneratePrivateKey();
-                csr = _cryptoPrimitives.GenerateCSR(privateKey, enrollmentId);
+                keyPair = _cryptoPrimitives.GenerateKeyPair();
+                csr = _cryptoPrimitives.GenerateCSR(keyPair, enrollmentId);
+            }
+            else {
+                keyPair = new AsymmetricCipherKeyPair(null, null) ;// ver si esta ok trabajar con estos tipos asymCkp o resulta mejor implementar uno con strings
             }
             // check crs codification
 
             Tuple<string, string> certs = await _caClient.Enroll(enrollmentId, enrollmentSecret, csr, profile, attrRqs);
 
             // check pkey isnt use where csr is provided
-            return new Enrollment(privateKey, certs.Item1, certs.Item2, this);
+            return new Enrollment(keyPair, certs.Item1, certs.Item2, this);
         }
 
         /// <summary>
@@ -73,9 +84,10 @@ namespace FabricCaClient {
             // Check for  attrReqs spected format
             // Implement new type Cert or use defatul X509_2(
             string cert = currentUser.Cert;
-            string privateKey = _cryptoPrimitives.GeneratePrivateKey();
-            // Add Subject to Cert element
-            string csr = _cryptoPrimitives.GenerateCSR(privateKey, cert.Subject);
+            AsymmetricCipherKeyPair privateKey = _cryptoPrimitives.GenerateKeyPair();
+            // Convert pem to cert in order to access its Subject element (Deserialize the certificate from PEM encoded data.)
+            //string csr = _cryptoPrimitives.GenerateCSR(privateKey, cert.Subject);
+            string csr = _cryptoPrimitives.GenerateCSR(privateKey, cert);
 
             Tuple<string, string> certs = await _caClient.Reenroll(currentUser, csr, attrRqs);
 
