@@ -24,13 +24,25 @@ namespace TestSdkCSharp {
             //Console.WriteLine($"{jsonResponse}\n");
 
             CAService caService = new CAService(null);
+            Console.WriteLine("Initilized entity");
             //var jsonResponse = await caService.GetCaInfo();
             //Console.WriteLine($"{jsonResponse}\n");
             // catch exception when server ir not up
             //No connection could be made because the target machine actively refused it.                                              
 
-            Console.WriteLine("Initilized entity");
+            #region Test Enroll
             Enrollment enr = await caService.Enroll("admin", "adminpw");
+            //PrintEnrollment(enr);
+            #endregion Test Enroll
+
+            #region Test Reenroll
+            Enrollment reenroll = await caService.Reenroll(enr);
+            PrintEnrollmentInstance(reenroll);
+
+            #endregion Test reenroll
+        }
+
+        static public void PrintEnrollmentInstance(Enrollment enr) {
             Console.WriteLine("Enrollment:");
             Console.WriteLine("Cert");
             Console.WriteLine(enr.Cert);
@@ -66,8 +78,6 @@ namespace TestSdkCSharp {
 
             //Console.WriteLine(enr.KeyPair.Public);
             Console.WriteLine(publicKeyPem);
-
-
         }
 
     }

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using System.Security.Cryptography.X509Certificates;
 
 namespace FabricCaClient
 {
@@ -86,8 +87,10 @@ namespace FabricCaClient
             string cert = currentUser.Cert;
             AsymmetricCipherKeyPair privateKey = _cryptoPrimitives.GenerateKeyPair();
             // Convert pem to cert in order to access its Subject element (Deserialize the certificate from PEM encoded data.)
-            //string csr = _cryptoPrimitives.GenerateCSR(privateKey, cert.Subject);
-            string csr = _cryptoPrimitives.GenerateCSR(privateKey, cert);
+
+            X509Certificate2 x509Cert = new X509Certificate2(Encoding.UTF8.GetBytes(currentUser.Cert));
+
+            string csr = _cryptoPrimitives.GenerateCSR(privateKey, x509Cert.Subject);
 
             Tuple<string, string> certs = await _caClient.Reenroll(currentUser, csr, attrRqs);
 

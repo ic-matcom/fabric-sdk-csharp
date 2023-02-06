@@ -1,25 +1,16 @@
 ﻿using Org.BouncyCastle.Asn1;
-using Org.BouncyCastle.Asn1.CryptoPro;
 using Org.BouncyCastle.Asn1.Pkcs;
 using Org.BouncyCastle.Asn1.Sec;
 using Org.BouncyCastle.Asn1.X509;
-using Org.BouncyCastle.Asn1.X9;
 using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Encodings;
-using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Operators;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
-using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
 using System.Collections;
-using System.Runtime.ConstrainedExecution;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Text.RegularExpressions;
 using X509Extension = Org.BouncyCastle.Asn1.X509.X509Extension;
 
 namespace FabricCaClient.Crypto {
@@ -49,6 +40,11 @@ namespace FabricCaClient.Crypto {
             _signatureAlgorithm = sAlgorithm;
         }
 
+        /// <summary>
+        /// Generates an asymetric KeyPair.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="CryptoException"></exception>
         internal AsymmetricCipherKeyPair GenerateKeyPair() {
             try {
                 // get the object identifier given by curveName
@@ -68,7 +64,13 @@ namespace FabricCaClient.Crypto {
             }
         }
 
-
+        /// <summary>
+        /// Generates a Certificate signing request according to the given keyPair and subject.
+        /// </summary>
+        /// <param name="keyPair"></param>
+        /// <param name="enrollmentId"></param>
+        /// <returns></returns>
+        /// <exception cref="CryptoException"></exception>
         internal string GenerateCSR(AsymmetricCipherKeyPair keyPair, string enrollmentId) {
 
             try {
@@ -110,6 +112,34 @@ namespace FabricCaClient.Crypto {
             catch (Exception exc) {
                 throw new CryptoException($"Unable to generate csr. {exc.Message}", exc);
             }
+        }
+
+        /// <summary>
+        /// Signs a given message using the provided Private Key.
+        /// </summary>
+        /// <param name="keyPair">KeyPair containing private key.</param>
+        /// <param name="messageToSign">Message to sign.</param>
+        /// <returns>A signed message using the signatureAlgorithm specified.</returns>
+        /// <exception cref="ArgumentException"></exception>
+        internal string Sign(AsymmetricCipherKeyPair keyPair, byte[] messageToSign) {
+            if (keyPair == null)
+                throw new ArgumentException("Unable to sign data, private key must be provided");
+            if (messageToSign == null || messageToSign.Length == 0)
+                throw new ArgumentException("Unable to sign empty message");
+
+            // Get a signer instance passing signature algorithm name (SHA256withECDSA)
+            ISigner signer = SignerUtilities.GetSigner(_signatureAlgorithm);
+
+            // Initilize signer with signing mode and signature key
+            signer.Init(true, keyPair.Private);
+
+            // Specify the data we want to generate signature for
+            signer.BlockUpdate(messageToSign, 0, messageToSign.Length);
+
+            // Generate cryptographic signature for the given message.
+            byte[] signature = signer.GenerateSignature();
+            
+            return Convert.ToBase64String(signature);
         }
     }
 }
