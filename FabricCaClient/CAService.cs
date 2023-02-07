@@ -83,14 +83,16 @@ namespace FabricCaClient
         /// <returns></returns>
         public async Task<Enrollment> Reenroll(Enrollment currentUser, string attrRqs = "") {
             // Check for  attrReqs spected format
-            // Implement new type Cert or use defatul X509_2(
-            string cert = currentUser.Cert;
             AsymmetricCipherKeyPair privateKey = _cryptoPrimitives.GenerateKeyPair();
+            
             // Convert pem to cert in order to access its Subject element (Deserialize the certificate from PEM encoded data.)
-
             X509Certificate2 x509Cert = new X509Certificate2(Encoding.UTF8.GetBytes(currentUser.Cert));
 
-            string csr = _cryptoPrimitives.GenerateCSR(privateKey, x509Cert.Subject);
+            // get Subject's Common name from certificate 
+            var certCN = (x509Cert.Subject.Split(',')[0].Split('=')[1]).ToString();
+            
+            // get new certificate signing request
+            string csr = _cryptoPrimitives.GenerateCSR(privateKey, certCN);
 
             Tuple<string, string> certs = await _caClient.Reenroll(currentUser, csr, attrRqs);
 

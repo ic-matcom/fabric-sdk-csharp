@@ -115,30 +115,19 @@ namespace FabricCaClient {
                 jsonBody.Add(new JProperty("attr_reqs", attrRqs));
 
             // get the result field which is Base64-encoded PEM
-
             // check verify flag
             var jsonResponse = await PostAsync(caUrlEnroll, jsonBody.ToString(Formatting.None), enrollmentId, enrollmentSecret);
 
             JObject jsonst = JObject.Parse(jsonResponse);
             bool success = jsonst["success"]?.Value<bool>() ?? false;
             if (success) {
-                //var data = (JObject)JsonConvert.DeserializeObject(jsonResponse);
-                //var signedPem = data.SelectToken("result.Cert").Value<string>();
                 try {
                     JObject result = jsonst["result"] as JObject;
                     if (result != null) {
-                        //verify following converison as ToUTF8String() is no longer available and was substituted by toString
-                        //string signedPem = Convert.FromBase64String(result["Cert"]?.Value<string>() ?? "").ToString();
-
                         string signedPem = Encoding.UTF8.GetString(Convert.FromBase64String(result["Cert"]?.Value<string>() ?? ""));
-                        //string signedPem = Convert.FromBase64String(result["Cert"]?.Value<string>() ?? "").ToUTF8String();
-
                         string caChain = Encoding.UTF8.GetString(Convert.FromBase64String(result["ServerInfo"]["CAChain"]?.Value<string>() ?? ""));
-                        //string caChain = result["ServerInfo"]["CAChain"].Value<string>();
-                        //string caChain = result.SelectToken("ServerInfo.CertCAChain").Value<string>();
-                        //string caChain = (result["ServerInfo"] as JObject)["CAChain"].Value<string>();
 
-                        return new Tuple<string, string>(signedPem, caChain);// CAChain too
+                        return new Tuple<string, string>(signedPem, caChain);
                     }
                 }
                 catch (Exception exc) {
@@ -158,7 +147,7 @@ namespace FabricCaClient {
         /// <exception cref="Exception"></exception>
         public async Task<Tuple<string, string>> Reenroll(Enrollment registrar, string csr, string attrRqs = "") {
             JObject jsonBody = new JObject {
-                new JProperty("csr", csr)
+                new JProperty("certificate_request", csr)
             };
             if (attrRqs != "")// attrRqs should already be a JArray of JObjects
                 jsonBody.Add(new JProperty("attr_reqs", attrRqs));
@@ -168,7 +157,6 @@ namespace FabricCaClient {
 
             JObject jsonst = JObject.Parse(jsonResponse);
             bool success = jsonst["success"]?.Value<bool>() ?? false;
-
 
             if (success) {
                 try {
@@ -339,9 +327,7 @@ namespace FabricCaClient {
             request.Content = new StringContent(content, Encoding.UTF8);
 
             if (registrar != null)
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", generateAuthToken(registrar, content));
-            // check token value type and Bearer spec
-            //request.Headers.TryAddWithoutValidation("Authorization", generateAuthTokenResult);
+                request.Headers.TryAddWithoutValidation("Authorization", generateAuthToken(registrar, content));
 
             HttpResponseMessage response = await sharedClient.SendAsync(request);
 
@@ -352,27 +338,29 @@ namespace FabricCaClient {
         }
 
         /// <summary>
-        /// Generates authorization token required for accessing fabric-ca APIs
+        /// Generates authorization token required for accessing fabric-ca APIs:
         /// </summary>
         /// <param name="registrar"></param>
         /// <param name="content"></param>
-        /// <returns></returns>
+        /// <returns>An enrollment token consisting of two base 64 encoded parts separated by a period: an enrollment certificate; a signature over the certificate and body of request.</returns>
         private string generateAuthToken(Enrollment registrar, string content) {
             // convert json string of content to a base 64 string
             string convContent = Convert.ToBase64String(Encoding.UTF8.GetBytes(content));
 
             // convert string of cert to a base 64 string
-            string cert = Convert.ToBase64String(Encoding.Unicode.GetBytes(registrar.Cert));
+            string cert = Convert.ToBase64String(Encoding.UTF8.GetBytes(registrar.Cert));
 
             // create message to sign
             string message = convContent + "." + cert;
 
             // convert to bytes array
-            byte[] messageInBytes = Convert.FromBase64String(message);
+            byte[] messageInBytes = Encoding.UTF8.GetBytes(message); 
 
 
             string authToken = cert + "." + cryptoPrimitives.Sign(registrar.KeyPair, messageInBytes);
 
+            Console.WriteLine("Authentication token:");
+            Console.WriteLine(authToken);
             return authToken;
         }
 

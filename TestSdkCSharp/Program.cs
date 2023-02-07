@@ -32,7 +32,7 @@ namespace TestSdkCSharp {
 
             #region Test Enroll
             Enrollment enr = await caService.Enroll("admin", "adminpw");
-            //PrintEnrollment(enr);
+            PrintEnrollmentInstance(enr);
             #endregion Test Enroll
 
             #region Test Reenroll
