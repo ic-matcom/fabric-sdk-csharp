@@ -192,7 +192,6 @@ namespace FabricCaClient {
                 new JProperty("id", enrollmentId),
                 new JProperty("affiliation", affiliatiton),
                 new JProperty("max_enrollments", maxEnrollments),
-
             };
 
             if (role != "")
@@ -203,7 +202,6 @@ namespace FabricCaClient {
                 jsonBody.Add(new JProperty("secret", enrollmentSecret));
 
             // get the result field which is Base64-encoded PEM
-
             // check verify flag
             var jsonResponse = await PostAsync(caUrlRegister, jsonBody.ToString(Formatting.None), registrar);
 

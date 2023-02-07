@@ -36,10 +36,18 @@ namespace TestSdkCSharp {
             #endregion Test Enroll
 
             #region Test Reenroll
-            Enrollment reenroll = await caService.Reenroll(enr);
-            PrintEnrollmentInstance(reenroll);
+            //Enrollment reenroll = await caService.Reenroll(enr);
+            //PrintEnrollmentInstance(reenroll);
 
             #endregion Test reenroll
+
+            #region Test Register
+            string secret = await caService.Register("appUser","", 10, "", enr);
+            Console.WriteLine("Secret:");
+            Console.WriteLine(secret);
+            //PrintEnrollmentInstance(reenroll);
+
+            #endregion Test Register
         }
 
         static public void PrintEnrollmentInstance(Enrollment enr) {
