@@ -3,6 +3,9 @@ using Newtonsoft.Json;
 using System.Net.Http.Headers;
 using System.Text;
 using FabricCaClient.Crypto;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 
 namespace FabricCaClient {
     /// <summary>
@@ -32,13 +35,13 @@ namespace FabricCaClient {
         private static HttpClient sharedClient;
 
         /// <summary>
-        /// Constructor for CAClient class
+        /// Constructor for CAClient class.
         /// </summary>
-        /// <param name="cryptoPrim"></param>
-        /// <param name="caEnpoint"></param>
-        /// <param name="baseUrl"></param>
-        /// <param name="_caCertsPath"></param>
-        /// <param name="_caName"></param>
+        /// <param name="cryptoPrimitives">An instance of a Crypto Suite for PKI key creation/signing/verification.</param>
+        /// <param name="caEnpoint">Http URL for the Fabric's certificate authority services endpoint.</param>
+        /// <param name="baseUrl">Ca url where the base api resides. (Default "/api/v1/").</param>
+        /// <param name="caCertsPath">Local ca certs path (for trusted root certs).</param>
+        /// <param name="caName">Name of the CA to direct traffic to within server as FabricCa servers support multiple Certificate Authorities from a single server.</param>
         public CAClient(CryptoPrimitives cryptoPrim, string caEnpoint = "", string baseUrl = "", string _caCertsPath = "", string _caName = "") {
             cryptoPrimitives = cryptoPrim;
 
@@ -67,12 +70,12 @@ namespace FabricCaClient {
         }
 
         /// <summary>
-        /// Enrolls an identity.
+        /// Enrolls a registered user in order to receive a signed X509 certificate.
         /// </summary>
-        /// <param name="enrollmentId"></param>
-        /// <param name="enrollmentSecret"></param>
-        /// <param name="csr"></param>
-        /// <param name="profile"></param>
+        /// <param name="enrollmentId">Unique ID to use for enrollment, previusly registered with register call to the ca.</param>
+        /// <param name="enrollmentSecret">The secret associated with the enrollment ID.</param>
+        /// <param name="csr">A PEM-encoded string containing the CSR (Certificate Signing Request) based on PKCS #10. (Generated for the ca Service if not initially provided).</param>
+        /// <param name="profile">The name of the signing profile to use when issuing the certificate.'tls' for a TLS certificate; otherwise, an enrollment certificate is issued.</param>
         /// <param name="attrRqs">A dictionary with attribute requests to be placed into the enrollment certificate. <remarks>Expected format is: "string attrName -> bool optional (wether or not the attr is required)".</remarks></param>
         /// <returns>A tuple containing a signed pem certificate and a string with caChain</returns>
         /// <exception cref="ArgumentException"></exception>
@@ -125,12 +128,12 @@ namespace FabricCaClient {
         }
 
         /// <summary>
-        /// Reenrolls an identity.
+        /// Reenrolls an identity in cases where his existing enrollment certificate is about to expire, or it has been compromised.
         /// </summary>
-        /// <param name="registrar"></param>
-        /// <param name="csr"></param>
-        /// <param name="attrRqs"></param>
-        /// <returns></returns>
+        /// <param name="registrar">The identity of the user that holds the existing enrollment certificate.</param>
+        /// <param name="csr">A PEM-encoded string containing the CSR (Certificate Signing Request) based on PKCS #10.</param>
+        /// <param name="attrRqs">A dictionary with attribute requests to be placed into the enrollment certificate. <remarks>Expected format is: "string attrName -> bool optional (wether or not the attr is required)".</remarks></param>
+        /// <returns>A tuple containing a signed pem certificate and a string with caChain</returns>
         /// <exception cref="Exception"></exception>
         public async Task<Tuple<string, string>> Reenroll(Enrollment registrar, string csr, Dictionary<string, bool> attrRqs = null) {
             JObject jsonBody = new JObject {
@@ -177,14 +180,17 @@ namespace FabricCaClient {
         /// <summary>
         /// Registers an identity.
         /// </summary>
-        /// <param name="enrollmentId"></param>
-        /// <param name="enrollmentSecret"></param>
-        /// <param name="maxEnrollments"></param>
-        /// <param name="attrs"></param>
-        /// <param name="registrar"></param>
-        /// <param name="role"></param>
-        /// <param name="affiliatiton"></param>
-        /// <returns></returns>
+        /// <param name="enrollmentId">The enrollment ID which uniquely identifies an identity.</param>
+        /// <param name="enrollmentSecret">The enrollment secret. If not provided, a random secret is generated.</param>
+        /// <param name="maxEnrollments">The maximum number of times the secret can be reused to enroll.</param>
+        /// <param name="attrs">An array of attribute names and values to give to the registered identity. 
+        /// <remarks>Expected format is for each item is: Tuple{string name, string value, bool ecert}, 
+        /// indicating name an value of the attribute and wether or not it should be included in an enrollment certificate by default.</remarks> 
+        /// </param>
+        /// <param name="registrar">The registrar that performs the operation.</param>
+        /// <param name="role">The type of the identity (e.g. *user*, *app*, *peer*, *orderer*, etc). Default role is client.</param>
+        /// <param name="affiliatiton">The affiliation of the new identity. If no affliation is provided, the affiliation of the registrar is used.</param>
+        /// <returns>A string representing the enrollment secret of the newly registered identity.</returns>
         /// <exception cref="Exception"></exception>
         public async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, Tuple<string, string, bool>[] attrs, Enrollment registrar, string role = "", string affiliatiton = "") {
             JObject jsonBody = new JObject {
@@ -286,33 +292,6 @@ namespace FabricCaClient {
             throw (new Exception("Error in revoke request"));
         }
 
-        internal async Task<string[]> GetCertificates(Enrollment registrar) {
-            var jsonResponse = await GetAsyncWithAuth(caUrlCertificates, "", registrar);
-
-            JObject jsonst = JObject.Parse(jsonResponse);
-            bool success = jsonst["success"]?.Value<bool>() ?? false;
-            if (success) {
-                try {
-                    JObject result = jsonst["result"] as JObject;
-                    if (result != null) {
-                        JArray certs = result["certs"] as JArray;
-                        if (certs != null && certs.Count > 0) {
-                            string[] certificates = new string[certs.Count];
-                            int i = 0;
-                            foreach (JToken cert in certs) {
-                                certs[i++] = cert["PEM"].Value<string>();
-                            }
-                            return certificates;
-                        }
-                    }
-                }
-                catch (Exception exc) {
-                    throw new Exception("Error in revoke request", exc);
-                }
-            }
-            throw (new Exception("Error in revoke request"));
-        }
-
         static async Task<string> GetAsync(string url) {
             // as per the using keyword specification, this object is disposed correctly after going out of the scope definition
             using HttpResponseMessage response = await sharedClient.GetAsync(url);
@@ -374,27 +353,11 @@ namespace FabricCaClient {
             return jsonResponse;
         }
 
-        private async Task<string> GetAsyncWithAuth(string url, string content, Enrollment registrar) {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
-
-            request.Content = new StringContent(content, Encoding.UTF8);
-
-            if (registrar != null)
-                request.Headers.TryAddWithoutValidation("Authorization", GenerateAuthToken(registrar, content));
-
-            HttpResponseMessage response = await sharedClient.SendAsync(request);
-
-            response.EnsureSuccessStatusCode();
-
-            var jsonResponse = await response.Content.ReadAsStringAsync();
-            return jsonResponse;
-        }
-
         /// <summary>
         /// Generates authorization token required for accessing fabric-ca APIs.
         /// </summary>
-        /// <param name="registrar"></param>
-        /// <param name="content"></param>
+        /// <param name="registrar">The identity of the registrar who is performing the request.</param>
+        /// <param name="content">Request body to sign.</param>
         /// <returns>An enrollment token consisting of two base 64 encoded parts separated by a period: an enrollment certificate; a signature over the certificate and body of request.</returns>
         private string GenerateAuthToken(Enrollment registrar, string content) {
             // convert json string of content to a base 64 string

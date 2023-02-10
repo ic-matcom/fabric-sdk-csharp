@@ -16,11 +16,15 @@ using Org.BouncyCastle.Math;
 
 
 namespace FabricCaClient.Crypto {
-    public class CryptoPrimitives {
+    /// <summary>
+    /// A custom implementation of a <see cref="ICryptoSuite"/> for PKI key creation/signing/verification.
+    /// </summary>
+    public class CryptoPrimitives : ICryptoSuite{
+        //(to extract as method's parameters)
         private int _securityLevel = 256;
-        private string _curveName = "secp256r1";
+        private string _curveName = "secp256r1"; // ECDSA curve
         private string _encryptionName = "EC";
-        private string _signatureAlgorithm = "SHA256withECDSA";
+        private string _signatureAlgorithm = "SHA256withECDSA"; // hashing function for signing 
 
         public IDictionary<int, string> SLevelToCurveMapping = new Dictionary<int, string>()
         {
@@ -45,9 +49,9 @@ namespace FabricCaClient.Crypto {
         /// <summary>
         /// Generates an asymetric KeyPair.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>An AsymmetricCipherKeyPair with Public and Private keys generated.</returns>
         /// <exception cref="CryptoException"></exception>
-        internal AsymmetricCipherKeyPair GenerateKeyPair() {
+        public AsymmetricCipherKeyPair GenerateKeyPair() {
             try {
                 // get the object identifier given by curveName
                 DerObjectIdentifier doi = SecNamedCurves.GetOid(_curveName);
@@ -69,11 +73,11 @@ namespace FabricCaClient.Crypto {
         /// <summary>
         /// Generates a Certificate signing request according to the given keyPair and subject.
         /// </summary>
-        /// <param name="keyPair"></param>
-        /// <param name="enrollmentId"></param>
-        /// <returns></returns>
+        /// <param name="keyPair">An AsymmetricCipherKeyPair instance with public and private keys.</param>
+        /// <param name="subjectName">The subjects name to register in the certificate.</param>
+        /// <returns>A 64 base encode pem certificate signing request.</returns>
         /// <exception cref="CryptoException"></exception>
-        internal string GenerateCSR(AsymmetricCipherKeyPair keyPair, string enrollmentId) {
+        public string GenerateCSR(AsymmetricCipherKeyPair keyPair, string subjectName) {
 
             try {
                 if (keyPair.Public == null || keyPair.Private == null) {
@@ -88,7 +92,7 @@ namespace FabricCaClient.Crypto {
                 // create the CSR subject
                 //Variant 1
                 IDictionary subjAttributes = new Hashtable {
-                    { X509Name.CN, enrollmentId }
+                    { X509Name.CN, subjectName }
                 };
                 var subject = new X509Name(new ArrayList(subjAttributes.Keys), subjAttributes);
 
@@ -111,7 +115,7 @@ namespace FabricCaClient.Crypto {
                 //strBuilder.AppendLine($"-----END CERTIFICATE REQUEST-----");
                 //Console.WriteLine(strBuilder.ToString());
 
-                // saving in base 64 format (pem)
+                // Saving in base 64 format (pem)
                 using StringWriter pemCert = new StringWriter();
                 PemWriter pemWriter = new PemWriter(pemCert);
                 pemWriter.WriteObject(pkcs10CertRequest);
@@ -130,7 +134,7 @@ namespace FabricCaClient.Crypto {
         /// <param name="messageToSign">Message to sign.</param>
         /// <returns>A signed message using the signatureAlgorithm specified.</returns>
         /// <exception cref="ArgumentException"></exception>
-        internal string Sign(AsymmetricCipherKeyPair keyPair, byte[] messageToSign) {
+        public string Sign(AsymmetricCipherKeyPair keyPair, byte[] messageToSign) {
             if (keyPair == null)
                 throw new ArgumentException("Unable to sign data, private key must be provided");
             if (messageToSign == null || messageToSign.Length == 0)
@@ -166,6 +170,12 @@ namespace FabricCaClient.Crypto {
             return Convert.ToBase64String(signature);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sigs"></param>
+        /// <param name="curveN"></param>
+        /// <returns></returns>
         private BigInteger[] PreventMalleability(BigInteger[] sigs, BigInteger curveN) {
             BigInteger cmpVal = curveN.Divide(BigInteger.Two);
 
