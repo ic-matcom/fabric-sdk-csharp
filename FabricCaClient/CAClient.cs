@@ -84,7 +84,7 @@ namespace FabricCaClient {
         /// <returns>A tuple containing a signed pem certificate and a string with caChain</returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="Exception"></exception>
-        public async Task<Tuple<string, string>> Enroll(string enrollmentId, string enrollmentSecret, string csr, string profile = "", string attrRqs = "") {
+        public async Task<Tuple<string, string>> Enroll(string enrollmentId, string enrollmentSecret, string csr, string profile = "", Dictionary<string, bool> attrRqs = null) {
             if (enrollmentId == "" || enrollmentSecret == "" || csr == "")
                 throw new ArgumentException($"Missing required parameters: enrollmentId-{enrollmentId}, enrollmentSecret-{enrollmentSecret} and csr-{csr} are all required");
 
@@ -93,8 +93,18 @@ namespace FabricCaClient {
             };
             if (profile != "")
                 jsonBody.Add(new JProperty("profile", profile));
-            if (attrRqs != "")// attrRqs should already be a JArray of JObjects
-                jsonBody.Add(new JProperty("attr_reqs", attrRqs));
+            if (attrRqs != null) {
+                // converting attrRqs to JArray of JObjects
+                JArray attrsArray = new JArray();
+                foreach (string attrName in attrRqs.Keys) {
+                    JObject attrObj = new JObject {
+                        new JProperty("name", attrName),
+                        new JProperty("optional", attrRqs[attrName])
+                    };
+                    attrsArray.Add(attrObj);
+                }
+                jsonBody.Add(new JProperty("attr_reqs", attrsArray));
+            }
 
             // get the result field which is Base64-encoded PEM
             // check verify flag

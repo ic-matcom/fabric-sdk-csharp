@@ -47,7 +47,7 @@ namespace FabricCaClient
         /// <param name="profile"></param>
         /// <param name="attrRqs"></param>
         /// <returns></returns>
-        public async Task<Enrollment> Enroll(string enrollmentId, string enrollmentSecret, string csr = "", string profile = "", string attrRqs = "") {
+        public async Task<Enrollment> Enroll(string enrollmentId, string enrollmentSecret, string csr = "", string profile = "", Dictionary<string, bool> attrRqs = null) {
             // this could be checked here    
             // if (enrollmentId == "" || enrollmentSecret == "" )
 

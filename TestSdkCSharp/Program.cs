@@ -12,8 +12,8 @@ namespace TestSdkCSharp {
             //var jsonResponse = await caclient.GetCaInfo();
             //Console.WriteLine($"{jsonResponse}\n");
 
-            //CAService caService = new CAService(null);
-            //Console.WriteLine("Initilized entity");
+            CAService caService = new CAService(null);
+            Console.WriteLine("Initilized entity");
             //var jsonResponse = await caService.GetCaInfo();
             //Console.WriteLine($"{jsonResponse}\n");
             // catch exception when server ir not up
@@ -22,6 +22,12 @@ namespace TestSdkCSharp {
             #region Test Enroll
             //Enrollment enr = await caService.Enroll("admin", "adminpw");
             //PrintEnrollmentInstance(enr);
+            #endregion Test Enroll
+
+            #region Test Enroll with atts
+            var attrs = new Dictionary<string, bool> { { "foo", true}, { "bar", true } };
+            Enrollment enr = await caService.Enroll("admin", "adminpw", attrRqs: attrs);
+            PrintEnrollmentInstance(enr);
             #endregion Test Enroll
 
             #region Test Reenroll
@@ -51,9 +57,9 @@ namespace TestSdkCSharp {
             //Console.WriteLine(certs);
             #endregion get cert info
 
-            var con = await TestRevocation("admin", "adminpw", "appUser74", "");
-            Console.WriteLine("Exit revocation method");
-            Console.WriteLine(con);
+            //var con = await TestRevocation("admin", "adminpw", "appUser73", "");
+            //Console.WriteLine("Exit revocation method");
+            //Console.WriteLine(con);
             #endregion Test Revoke
         }
 
