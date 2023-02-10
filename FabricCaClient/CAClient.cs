@@ -31,11 +31,6 @@ namespace FabricCaClient {
         // returns error with ssl
         private static HttpClient sharedClient;
 
-        //borrar 
-        string caVersion = "1.5.5";
-        public string CAName { get; private set; }
-        private bool? newPayloadType;
-
         /// <summary>
         /// Constructor for CAClient class
         /// </summary>
@@ -61,8 +56,6 @@ namespace FabricCaClient {
             sharedClient = new HttpClient(handler) {
                 BaseAddress = new Uri(defaultCaEndpoint + defaultCaBaseUrl),
             };
-
-            CAName = "ca-org1";
         }
 
         /// <summary>
@@ -91,6 +84,8 @@ namespace FabricCaClient {
             JObject jsonBody = new JObject {
                 new JProperty("certificate_request", csr)
             };
+            if (caName != "")
+                jsonBody.Add(new JProperty("caname", caName));
             if (profile != "")
                 jsonBody.Add(new JProperty("profile", profile));
             if (attrRqs != null) {
@@ -141,6 +136,8 @@ namespace FabricCaClient {
             JObject jsonBody = new JObject {
                 new JProperty("certificate_request", csr)
             };
+            if (caName != "")
+                jsonBody.Add(new JProperty("caname", caName));
             if (attrRqs != null) {
                 // converting attrRqs to JArray of JObjects
                 JArray attrsArray = new JArray();
@@ -196,6 +193,8 @@ namespace FabricCaClient {
                 new JProperty("max_enrollments", maxEnrollments),
             };
 
+            if (caName != "")
+                jsonBody.Add(new JProperty("caname", caName));
             if (role != "")
                 jsonBody.Add(new JProperty("type", role));
             if (enrollmentSecret != "")
@@ -261,6 +260,9 @@ namespace FabricCaClient {
                 new JProperty("reason", reason),
                 new JProperty("gencrl", genCrl),
             };
+
+            if (caName != "")
+                jsonBody.Add(new JProperty("caname", caName));
 
             // get the result field which is Base64-encoded PEM
             // check verify flag and caclient attr

@@ -2,6 +2,7 @@
 using Org.BouncyCastle.Crypto;
 using System.Text;
 using System.Security.Cryptography.X509Certificates;
+using System;
 
 namespace FabricCaClient
 {
@@ -25,7 +26,7 @@ namespace FabricCaClient
         /// <param name="caEnpoint"></param>
         /// <param name="baseUrl"></param>
         /// <param name="caCertsPath"></param>
-        /// <param name="caName"></param>
+        /// <param name="caName">Name of the CA to direct traffic to within server as FabricCa servers support multiple Certificate Authorities from a single server.</param>
         public CAService(CryptoPrimitives cryptoPrimitives, string caEnpoint = "", string baseUrl = "", string caCertsPath = "", string caName = "") {
             if (cryptoPrimitives != null) {
                 _cryptoPrimitives = cryptoPrimitives;

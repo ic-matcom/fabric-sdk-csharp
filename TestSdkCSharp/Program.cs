@@ -12,16 +12,16 @@ namespace TestSdkCSharp {
             //var jsonResponse = await caclient.GetCaInfo();
             //Console.WriteLine($"{jsonResponse}\n");
 
-            CAService caService = new CAService(null);
-            Console.WriteLine("Initilized entity");
+            //CAService caService = new CAService(null, caName: "ca-org1");
+            //Console.WriteLine("Initilized entity");
             //var jsonResponse = await caService.GetCaInfo();
             //Console.WriteLine($"{jsonResponse}\n");
             // catch exception when server ir not up
             //No connection could be made because the target machine actively refused it.                                              
 
             #region Test Enroll
-            Enrollment enr = await caService.Enroll("admin", "adminpw");
-            PrintEnrollmentInstance(enr);
+            //Enrollment enr = await caService.Enroll("admin", "adminpw");
+            //PrintEnrollmentInstance(enr);
             #endregion Test Enroll
 
             #region Test Enroll with atts
@@ -55,8 +55,8 @@ namespace TestSdkCSharp {
             #endregion Test Register
 
             #region Test Register with atts
-            var attrs = new Tuple<string, string, bool>[] { new Tuple<string, string, bool>("foo", "bar", false), new Tuple<string, string, bool>("foo1", "bar1", true) };
-            string secret = await caService.Register("appUser72", "", 10, attrs: attrs, enr);
+            //var attrs = new Tuple<string, string, bool>[] { new Tuple<string, string, bool>("foo", "bar", false), new Tuple<string, string, bool>("foo1", "bar1", true) };
+            //string secret = await caService.Register("appUser72", "", 10, attrs: attrs, enr);
             #endregion Test Register with atts
 
             #region Test Revoke
@@ -68,15 +68,15 @@ namespace TestSdkCSharp {
             //Console.WriteLine(certs);
             #endregion get cert info
 
-            //var con = await TestRevocation("admin", "adminpw", "appUser73", "");
-            //Console.WriteLine("Exit revocation method");
-            //Console.WriteLine(con);
+            var con = await TestRevocation("admin", "adminpw", "appUser71", "");
+            Console.WriteLine("Exit revocation method");
+            Console.WriteLine(con);
             #endregion Test Revoke
         }
 
         static public async Task<string> TestRevocation(string registrarName, string registrarSecret, string userId, string userSecret = "", int maxEnrollment = 10) {
             Console.WriteLine("Enter revocation method");
-            CAService caService = new CAService(null);
+            CAService caService = new CAService(null, caName: "ca-org1");
             Enrollment enr = await caService.Enroll(registrarName, registrarSecret);
             Console.WriteLine("Admin enrolled");
 
