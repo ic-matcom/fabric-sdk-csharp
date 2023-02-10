@@ -70,15 +70,12 @@ namespace FabricCaClient
         /// <param name="csr">A PEM-encoded string containing the CSR (Certificate Signing Request) based on PKCS #10. (Optional parameter as it can be generated from enrollmentId and secret).</param>
         /// <param name="profile">The name of the signing profile to use when issuing the certificate.'tls' for a TLS certificate; otherwise, an enrollment certificate is issued.</param>
         /// <param name="attrRqs">A dictionary with attribute requests to be placed into the enrollment certificate. <remarks>Expected format is: "string attrName -> bool optional (wether or not the attr is required)".</remarks></param>
-        /// <returns>An <see cref="Enrollment"/> instance with corresponding keypair (generated if csr not provided), enrollment and CA certificates. </returns>
+        /// <returns>An <see cref="Enrollment"/> instance with corresponding keypair (generated randomly if csr not provided null otherwise), enrollment and CA certificates. </returns>
         public async Task<Enrollment> Enroll(string enrollmentId, string enrollmentSecret, string csr = "", string profile = "", Dictionary<string, bool> attrRqs = null) {
             if (string.IsNullOrEmpty(enrollmentId))
                 throw new ArgumentException("Enrollment id is not set. Please provide a valid id for enrollment.");
             if (string.IsNullOrEmpty(enrollmentSecret))
-                throw new ArgumentException("Enrollment secret is not set. Please provide a valid id for enrollment.");// this could be checked here    
-            // if (enrollmentId == "" || enrollmentSecret == "" )
-
-            // check attReqs format, is possible one need to reformat here to give the spected form
+                throw new ArgumentException("Enrollment secret is not set. Please provide a valid id for enrollment.");  
 
             AsymmetricCipherKeyPair keyPair;
             if (csr == "") {
@@ -86,7 +83,8 @@ namespace FabricCaClient
                 csr = _cryptoPrimitives.GenerateCSR(keyPair, enrollmentId);
             }
             else {
-                keyPair = new AsymmetricCipherKeyPair(null, null);// ver si esta ok trabajar con estos tipos asymCkp o resulta mejor implementar uno con strings
+                keyPair = null;
+                //keyPair = new AsymmetricCipherKeyPair(null, null);// ver si esta ok trabajar con estos tipos asymCkp o resulta mejor implementar uno con strings
             }
 
             Tuple<string, string> certs = await _caClient.Enroll(enrollmentId, enrollmentSecret, csr, profile, attrRqs);

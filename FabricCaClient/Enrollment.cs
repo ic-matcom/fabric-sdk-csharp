@@ -2,7 +2,7 @@
 
 namespace FabricCaClient {
     public class Enrollment {
-        public AsymmetricCipherKeyPair KeyPair { get; private set; }
+        public AsymmetricCipherKeyPair KeyPair { get; set; }
         public string Cert { get; private set; }
         public string CAChainCert { get; private set; }
         public CAService CAService { get; private set; } // remove this item
