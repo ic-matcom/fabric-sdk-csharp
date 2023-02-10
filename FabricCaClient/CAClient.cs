@@ -80,7 +80,7 @@ namespace FabricCaClient {
         /// <param name="enrollmentSecret"></param>
         /// <param name="csr"></param>
         /// <param name="profile"></param>
-        /// <param name="attrRqs"></param>
+        /// <param name="attrRqs">A dictionary with attribute requests to be placed into the enrollment certificate. <remarks>Expected format is: "string attrName -> bool optional (wether or not the attr is required)".</remarks></param>
         /// <returns>A tuple containing a signed pem certificate and a string with caChain</returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="Exception"></exception>
@@ -137,12 +137,22 @@ namespace FabricCaClient {
         /// <param name="attrRqs"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public async Task<Tuple<string, string>> Reenroll(Enrollment registrar, string csr, string attrRqs = "") {
+        public async Task<Tuple<string, string>> Reenroll(Enrollment registrar, string csr, Dictionary<string, bool> attrRqs = null) {
             JObject jsonBody = new JObject {
                 new JProperty("certificate_request", csr)
             };
-            if (attrRqs != "")// attrRqs should already be a JArray of JObjects
-                jsonBody.Add(new JProperty("attr_reqs", attrRqs));
+            if (attrRqs != null) {
+                // converting attrRqs to JArray of JObjects
+                JArray attrsArray = new JArray();
+                foreach (string attrName in attrRqs.Keys) {
+                    JObject attrObj = new JObject {
+                        new JProperty("name", attrName),
+                        new JProperty("optional", attrRqs[attrName])
+                    };
+                    attrsArray.Add(attrObj);
+                }
+                jsonBody.Add(new JProperty("attr_reqs", attrsArray));
+            }
 
             // check verify flag
             var jsonResponse = await PostAsync(caUrlReenroll, jsonBody.ToString(Formatting.None), registrar);
@@ -179,7 +189,7 @@ namespace FabricCaClient {
         /// <param name="affiliatiton"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, string attrs, Enrollment registrar, string role = "", string affiliatiton = "") {
+        public async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, Tuple<string, string, bool>[] attrs, Enrollment registrar, string role = "", string affiliatiton = "") {
             JObject jsonBody = new JObject {
                 new JProperty("id", enrollmentId),
                 new JProperty("affiliation", affiliatiton),
@@ -188,10 +198,21 @@ namespace FabricCaClient {
 
             if (role != "")
                 jsonBody.Add(new JProperty("type", role));
-            if (attrs != "")// attrs should already be a JArray of JObjects
-                jsonBody.Add(new JProperty("attrs", attrs));
             if (enrollmentSecret != "")
                 jsonBody.Add(new JProperty("secret", enrollmentSecret));
+            if (attrs != null) {
+                // converting attrs to JArray of JObjects
+                JArray attrsArray = new JArray();
+                foreach (var attrTuple in attrs) {
+                    JObject attrObj = new JObject {
+                        new JProperty("name", attrTuple.Item1),
+                        new JProperty("value", attrTuple.Item2),
+                        new JProperty("ecert", attrTuple.Item3)
+                    };
+                    attrsArray.Add(attrObj);
+                }
+                jsonBody.Add(new JProperty("attrs", attrsArray));
+            }
 
             // get the result field which is Base64-encoded PEM
             // check verify flag

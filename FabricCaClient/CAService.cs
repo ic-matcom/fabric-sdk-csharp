@@ -75,7 +75,7 @@ namespace FabricCaClient
         /// <param name="currentUser"></param>
         /// <param name="attrRqs"></param>
         /// <returns></returns>
-        public async Task<Enrollment> Reenroll(Enrollment currentUser, string attrRqs = "") {
+        public async Task<Enrollment> Reenroll(Enrollment currentUser, Dictionary<string, bool> attrRqs = null) {
             // Check for  attrReqs spected format
             AsymmetricCipherKeyPair privateKey = _cryptoPrimitives.GenerateKeyPair();
 
@@ -99,12 +99,15 @@ namespace FabricCaClient
         /// <param name="enrollmentId"></param>
         /// <param name="enrollmentSecret"></param>
         /// <param name="maxEnrollments"></param>
-        /// <param name="attrs"></param>
+        /// <param name="attrs">An array of attribute names and values to give to the registered identity. 
+        /// <remarks>Expected format is for each item is: Tuple{string name, string value, bool ecert}, 
+        /// indicating name an value of the attribute and wether or not it should be included in an enrollment certificate by default.</remarks> 
+        /// </param>
         /// <param name="registrar"></param>
         /// <param name="role"></param>
         /// <param name="affiliatiton"></param>
         /// <returns></returns>
-        public async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, string attrs, Enrollment registrar, string role = "", string affiliatiton = "") {
+        public async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, Tuple<string, string, bool>[] attrs, Enrollment registrar, string role = "", string affiliatiton = "") {
             // check enrollmentScret is no ""
             return await _caClient.Register(enrollmentId, enrollmentSecret, maxEnrollments, attrs, registrar, role, affiliatiton);
         }

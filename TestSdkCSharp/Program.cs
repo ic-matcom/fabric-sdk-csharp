@@ -20,20 +20,26 @@ namespace TestSdkCSharp {
             //No connection could be made because the target machine actively refused it.                                              
 
             #region Test Enroll
-            //Enrollment enr = await caService.Enroll("admin", "adminpw");
-            //PrintEnrollmentInstance(enr);
+            Enrollment enr = await caService.Enroll("admin", "adminpw");
+            PrintEnrollmentInstance(enr);
             #endregion Test Enroll
 
             #region Test Enroll with atts
-            var attrs = new Dictionary<string, bool> { { "foo", true}, { "bar", true } };
-            Enrollment enr = await caService.Enroll("admin", "adminpw", attrRqs: attrs);
-            PrintEnrollmentInstance(enr);
+            //var attrs = new Dictionary<string, bool> { { "foo", true}, { "bar", true } };
+            //Enrollment enr = await caService.Enroll("admin", "adminpw", attrRqs: attrs);
+            //PrintEnrollmentInstance(enr);
             #endregion Test Enroll
 
             #region Test Reenroll
             //Enrollment reenroll = await caService.Reenroll(enr);
             //PrintEnrollmentInstance(reenroll);
             #endregion Test reenroll
+
+            #region Test Reenroll with atts
+            //var attrs = new Dictionary<string, bool> { { "foo", true }, { "bar", true } };
+            //Enrollment reenroll = await caService.Reenroll(enr, attrRqs: attrs);
+            //PrintEnrollmentInstance(reenroll);
+            #endregion Test reenroll with atts
 
             #region Test Register
             //string secret = await caService.Register("appUser", "", 10, "", enr);PTsCHyhTxcJc
@@ -47,6 +53,11 @@ namespace TestSdkCSharp {
             //PrintEnrollmentInstance(enr2);
             #endregion Test Enroll
             #endregion Test Register
+
+            #region Test Register with atts
+            var attrs = new Tuple<string, string, bool>[] { new Tuple<string, string, bool>("foo", "bar", false), new Tuple<string, string, bool>("foo1", "bar1", true) };
+            string secret = await caService.Register("appUser72", "", 10, attrs: attrs, enr);
+            #endregion Test Register with atts
 
             #region Test Revoke
             string userId = "appUser70";//12 con 20 ok, pero de 10 a 14 daba error con los dos tipos de autorizacion
@@ -69,7 +80,7 @@ namespace TestSdkCSharp {
             Enrollment enr = await caService.Enroll(registrarName, registrarSecret);
             Console.WriteLine("Admin enrolled");
 
-            string secret = await caService.Register(userId, userSecret, maxEnrollment, "", enr);
+            string secret = await caService.Register(userId, userSecret, maxEnrollment, null, enr);
             Console.WriteLine("Secret:");
             Console.WriteLine(secret);
 
