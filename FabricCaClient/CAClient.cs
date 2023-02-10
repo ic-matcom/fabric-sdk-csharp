@@ -8,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using FabricCaClient.Exceptions;
 using System.Text.Json.Nodes;
+using System.Net.Sockets;
 
 namespace FabricCaClient {
     /// <summary>
@@ -63,6 +64,22 @@ namespace FabricCaClient {
             sharedClient = new HttpClient(handler) {
                 BaseAddress = new Uri(defaultCaEndpoint + defaultCaBaseUrl),
             };
+        }
+
+        /// <summary>
+        /// Returns CaName.
+        /// </summary>
+        /// <returns>A string containing caName.</returns>
+        internal string GetCaName() {
+            return caName;
+        }
+
+        /// <summary>
+        /// Returns CryptoSuite instance in use.
+        /// </summary>
+        /// <returns>A CryptoPrimitives instance.</returns>
+        internal CryptoPrimitives GetCryptoSuite() {
+            return cryptoPrimitives;
         }
 
         /// <summary>

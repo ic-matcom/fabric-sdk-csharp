@@ -17,6 +17,23 @@ namespace FabricCaClient
         private CAClient _caClient;
         private string[] revokingReasons = { "unspecified", "keyCompromise", "cACompromise", "affiliationChanged", "superseded", "cessationOfOperation", "certificateHold", "removeFromCRL", "privilegeWithdrawn", "aACompromise" };
 
+        /// <summary>
+        /// Returns CaName.
+        /// </summary>
+        /// <returns>A string containing caName.</returns>
+        public string GetCaName() {
+            return _caClient.GetCaName();
+        }
+
+        //this could be remove, don't find it necessary
+        /// <summary>
+        /// Returns CryptoSuite instance in use.
+        /// </summary>
+        /// <returns>A CryptoPrimitives instance.</returns>
+        public CryptoPrimitives GetCryptoSuite() {
+            return _caClient.GetCryptoSuite();
+        }
+        
         // to test
         /// <summary>
         /// Asks for CA basic info.
