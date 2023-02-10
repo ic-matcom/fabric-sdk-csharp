@@ -1,17 +1,6 @@
 ﻿using FabricCaClient;
-using Org.BouncyCastle.Asn1;
-using Org.BouncyCastle.Asn1.Pkcs;
-using Org.BouncyCastle.Asn1.X509;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Encodings;
-using Org.BouncyCastle.Crypto.Engines;
-using Org.BouncyCastle.Crypto.Generators;
-using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
-using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
-using System.Collections;
-using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -23,31 +12,71 @@ namespace TestSdkCSharp {
             //var jsonResponse = await caclient.GetCaInfo();
             //Console.WriteLine($"{jsonResponse}\n");
 
-            CAService caService = new CAService(null);
-            Console.WriteLine("Initilized entity");
+            //CAService caService = new CAService(null);
+            //Console.WriteLine("Initilized entity");
             //var jsonResponse = await caService.GetCaInfo();
             //Console.WriteLine($"{jsonResponse}\n");
             // catch exception when server ir not up
             //No connection could be made because the target machine actively refused it.                                              
 
             #region Test Enroll
-            Enrollment enr = await caService.Enroll("admin", "adminpw");
-            PrintEnrollmentInstance(enr);
+            //Enrollment enr = await caService.Enroll("admin", "adminpw");
+            //PrintEnrollmentInstance(enr);
             #endregion Test Enroll
 
             #region Test Reenroll
             //Enrollment reenroll = await caService.Reenroll(enr);
             //PrintEnrollmentInstance(reenroll);
-
             #endregion Test reenroll
 
             #region Test Register
-            string secret = await caService.Register("appUser","", 10, "", enr);
+            //string secret = await caService.Register("appUser", "", 10, "", enr);PTsCHyhTxcJc
+            //string secret = await caService.Register("appUser1", "", 10, "", enr);//yyWUYRvGzxyE
+            //string secret = await caService.Register("appUser2", "", 10, "", enr);//QxNJJuSPzcHh
+            //string secret = await caService.Register("appUser3", "", 10, "", enr);//EclVNfPWZEsF
+            //string secret = await caService.Register("appUser10", "", 10, "", enr);//
+
+            #region Test Enroll
+            //Enrollment enr2 = await caService.Enroll("appUser10", secret);
+            //PrintEnrollmentInstance(enr2);
+            #endregion Test Enroll
+            #endregion Test Register
+
+            #region Test Revoke
+            string userId = "appUser70";//12 con 20 ok, pero de 10 a 14 daba error con los dos tipos de autorizacion
+
+            #region get cert info
+            //var certs = await caService.GetCertificates(enr);
+            //Console.WriteLine("Certtificates:");
+            //Console.WriteLine(certs);
+            #endregion get cert info
+
+            var con = await TestRevocation("admin", "adminpw", "appUser74", "");
+            Console.WriteLine("Exit revocation method");
+            Console.WriteLine(con);
+            #endregion Test Revoke
+        }
+
+        static public async Task<string> TestRevocation(string registrarName, string registrarSecret, string userId, string userSecret = "", int maxEnrollment = 10) {
+            Console.WriteLine("Enter revocation method");
+            CAService caService = new CAService(null);
+            Enrollment enr = await caService.Enroll(registrarName, registrarSecret);
+            Console.WriteLine("Admin enrolled");
+
+            string secret = await caService.Register(userId, userSecret, maxEnrollment, "", enr);
             Console.WriteLine("Secret:");
             Console.WriteLine(secret);
-            //PrintEnrollmentInstance(reenroll);
 
-            #endregion Test Register
+            Enrollment enr2 = await caService.Enroll(userId, secret);
+            PrintEnrollmentInstance(enr2);
+            Console.WriteLine("New user enrolled");
+
+            var result = await caService.Revoke(userId, "", "", "unspecified", true, enr);
+            Console.WriteLine("Result revocation:");
+            Console.WriteLine("CRL:");
+            Console.WriteLine(result);
+
+            return "Ready";
         }
 
         static public void PrintEnrollmentInstance(Enrollment enr) {

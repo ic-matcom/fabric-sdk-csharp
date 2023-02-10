@@ -12,6 +12,8 @@ using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509.Extension;
 using System.Collections;
 using X509Extension = Org.BouncyCastle.Asn1.X509.X509Extension;
+using Org.BouncyCastle.Math;
+
 
 namespace FabricCaClient.Crypto {
     public class CryptoPrimitives {
@@ -84,6 +86,7 @@ namespace FabricCaClient.Crypto {
                 DerSet exts = new DerSet(new AttributePkcs(PkcsObjectIdentifiers.Pkcs9AtExtensionRequest, new DerSet(new X509Extensions(extensions))));
 
                 // create the CSR subject
+                //Variant 1
                 IDictionary subjAttributes = new Hashtable {
                     { X509Name.CN, enrollmentId }
                 };
@@ -93,6 +96,12 @@ namespace FabricCaClient.Crypto {
                 // PkcsObjectIdentifiers.Sha256WithRsaEncryption.Id
                 ISignatureFactory sf = new Asn1SignatureFactory(_signatureAlgorithm, keyPair.Private, new SecureRandom());
                 Pkcs10CertificationRequest pkcs10CertRequest = new Pkcs10CertificationRequest(sf, subject, keyPair.Public, exts);
+
+                //variant 2
+                //var subjAttributes = new Dictionary<DerObjectIdentifier, string> { { X509Name.CN, enrollmentId } };
+                //ISignatureFactory sf = new Asn1SignatureFactory(_signatureAlgorithm, keyPair.Private, new SecureRandom());
+                //Pkcs10CertificationRequest pkcs10CertRequest = new Pkcs10CertificationRequest(sf, new X509Name(subjAttributes.Keys.ToList(), subjAttributes), keyPair.Public, exts);
+                //variant 2 end
 
                 //var csr = Convert.ToBase64String(pkcs10CertRequest.GetEncoded());
                 //var csrPem = Regex.Replace(csr, ".{64}", "$0\n");
@@ -138,8 +147,65 @@ namespace FabricCaClient.Crypto {
 
             // Generate cryptographic signature for the given message.
             byte[] signature = signer.GenerateSignature();
-            
+
+            if (keyPair.Private is ECPrivateKeyParameters) {
+                ECPrivateKeyParameters privateKey = (ECPrivateKeyParameters)keyPair.Private;
+                BigInteger curveN = privateKey.Parameters.N;
+                BigInteger[] sigs = DecodeECDSASignature(signature);
+                sigs = PreventMalleability(sigs, curveN);
+                using (MemoryStream ms = new MemoryStream()) {
+                    DerSequenceGenerator seq = new DerSequenceGenerator(ms);
+                    seq.AddObject(new DerInteger(sigs[0]));
+                    seq.AddObject(new DerInteger(sigs[1]));
+                    seq.Close();
+                    ms.Flush();
+                    signature = ms.ToArray();
+                }
+            }
+
             return Convert.ToBase64String(signature);
+        }
+
+        private BigInteger[] PreventMalleability(BigInteger[] sigs, BigInteger curveN) {
+            BigInteger cmpVal = curveN.Divide(BigInteger.Two);
+
+            BigInteger sval = sigs[1];
+
+            if (sval.CompareTo(cmpVal) > 0)
+                sigs[1] = curveN.Subtract(sval);
+
+            return sigs;
+        }
+
+        /// <summary>
+        /// Decodes an ECDSA signature and returns a two element BigInteger array.
+        /// </summary>
+        /// <param name="signature">Bytes representing an ECDSA signature.</param>
+        /// <returns>BigInteger array with signature's r and s values.</returns>
+        /// <exception cref="CryptoException"></exception>
+        private static BigInteger[] DecodeECDSASignature(byte[] signature) {
+            Asn1InputStream asnInputStream = new Asn1InputStream(signature);
+            Asn1Object asn1 = asnInputStream.ReadObject();
+            BigInteger[] sigs = new BigInteger[2];
+            int count = 0;
+            if (asn1 is Asn1Sequence) {
+                Asn1Sequence asn1Sequence = (Asn1Sequence)asn1;
+                foreach (Asn1Encodable asn1Encodable in asn1Sequence) {
+                    Asn1Object asn1Primitive = asn1Encodable.ToAsn1Object();
+                    if (asn1Primitive is DerInteger) {
+                        DerInteger asn1Integer = (DerInteger)asn1Primitive;
+                        BigInteger integer = asn1Integer.Value;
+                        if (count < 2)
+                            sigs[count] = integer;
+                        count++;
+                    }
+                }
+            }
+
+            if (count != 2)
+                throw new CryptoException($"Invalid ECDSA signature. Expected count of 2 but got: {count}. Signature is: {BitConverter.ToString(signature).Replace("-", string.Empty)}");
+            
+            return sigs;
         }
     }
 }

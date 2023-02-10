@@ -1,13 +1,6 @@
 ﻿using FabricCaClient.Crypto;
-using Newtonsoft.Json.Linq;
 using Org.BouncyCastle.Crypto;
-using System;
-using System.Collections.Generic;
-using System.Dynamic;
-using System.Linq;
-using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
 using System.Security.Cryptography.X509Certificates;
 
 namespace FabricCaClient
@@ -18,6 +11,7 @@ namespace FabricCaClient
     public class CAService {
         private CryptoPrimitives _cryptoPrimitives;
         private CAClient _caClient;
+        private string[] revokingReasons = { "unspecified", "keyCompromise", "cACompromise", "affiliationChanged", "superseded", "cessationOfOperation", "certificateHold", "removeFromCRL", "privilegeWithdrawn", "aACompromise" };
 
         // to test
         public async Task<string> GetCaInfo() {
@@ -65,7 +59,7 @@ namespace FabricCaClient
                 csr = _cryptoPrimitives.GenerateCSR(keyPair, enrollmentId);
             }
             else {
-                keyPair = new AsymmetricCipherKeyPair(null, null) ;// ver si esta ok trabajar con estos tipos asymCkp o resulta mejor implementar uno con strings
+                keyPair = new AsymmetricCipherKeyPair(null, null);// ver si esta ok trabajar con estos tipos asymCkp o resulta mejor implementar uno con strings
             }
             // check crs codification
 
@@ -76,7 +70,7 @@ namespace FabricCaClient
         }
 
         /// <summary>
-        /// Reenrolls an identity
+        /// Reenrolls an identity.
         /// </summary>
         /// <param name="currentUser"></param>
         /// <param name="attrRqs"></param>
@@ -84,14 +78,14 @@ namespace FabricCaClient
         public async Task<Enrollment> Reenroll(Enrollment currentUser, string attrRqs = "") {
             // Check for  attrReqs spected format
             AsymmetricCipherKeyPair privateKey = _cryptoPrimitives.GenerateKeyPair();
-            
+
             // Convert pem to cert in order to access its Subject element (Deserialize the certificate from PEM encoded data.)
             X509Certificate2 x509Cert = new X509Certificate2(Encoding.UTF8.GetBytes(currentUser.Cert));
 
-            // get Subject's Common name from certificate 
+            // Get Subject's Common name from certificate 
             var certCN = (x509Cert.Subject.Split(',')[0].Split('=')[1]).ToString();
-            
-            // get new certificate signing request
+
+            // Get new certificate signing request
             string csr = _cryptoPrimitives.GenerateCSR(privateKey, certCN);
 
             Tuple<string, string> certs = await _caClient.Reenroll(currentUser, csr, attrRqs);
@@ -116,19 +110,31 @@ namespace FabricCaClient
         }
 
         /// <summary>
-        /// Revokes an identity
+        /// Revokes an identity or a given certificate. When revoking an identity all the relates certificaters are revoked, and further enroll calls with its id will be denied.
         /// </summary>
-        /// <param name="enrollmentId"></param>
-        /// <param name="aki"></param>
-        /// <param name="serial"></param>
-        /// <param name="reason"></param>
-        /// <param name="genCrl"></param>
-        /// <param name="registrar"></param>
-        /// <returns></returns>
-        public async Task<Tuple<string, string>> Revoke(string enrollmentId, string aki, string serial, string reason, bool genCrl, Enrollment registrar) {
+        /// <param name="enrollmentId">Id of the identity to revoke</param>
+        /// <param name="aki">Authority Key Identifier (hex encoded) for the certificate to revoke. 
+        /// <remarks>
+        /// Required when revoking a certitificate, otherwise shoud be set to "".
+        /// </remarks>
+        /// </param>
+        /// <param name="serial"> Serial number (hex encoded) for the certificate to revoke.
+        /// <remarks>
+        /// Required when revoking a certitificate, otherwise shoud be set to "".
+        /// </remarks></param>
+        /// <param name="reason">A reason for the revocation. Please visit <see href="https://www.rfc-editor.org/rfc/rfc5280.html#section-5.3.1">RFC 6960</see> for a list of correct values according to HF CA specifications.</param>
+        /// <param name="genCrl">A boolean to indicate whether or not to generate a Certificate Revocation List.</param>
+        /// <param name="registrar">The instance of a Enrollment encapsulating the identity that perfoms the revocation.</param>
+        /// <returns>A base64 encoded PEM-encoded CRL.</returns>
+        public async Task<string> Revoke(string enrollmentId, string aki, string serial, string reason, bool genCrl, Enrollment registrar) {
             // check ca name
+            if (!revokingReasons.Contains(reason))
+                throw new Exception("Revocation reason not found. Please provide one that belongs to those listed in the HF CA specifications");
             return await _caClient.Revoke(enrollmentId, aki, serial, reason, genCrl, registrar);
         }
-    }
 
+        public async Task<string[]> GetCertificates(Enrollment registrar) {
+            return await _caClient.GetCertificates(registrar);
+        }
+    }
 }
