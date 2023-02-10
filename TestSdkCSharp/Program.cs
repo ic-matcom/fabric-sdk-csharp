@@ -12,10 +12,10 @@ namespace TestSdkCSharp {
             //var jsonResponse = await caclient.GetCaInfo();
             //Console.WriteLine($"{jsonResponse}\n");
 
-            //CAService caService = new CAService(null, caName: "ca-org1");
-            //Console.WriteLine("Initilized entity");
-            //var jsonResponse = await caService.GetCaInfo();
-            //Console.WriteLine($"{jsonResponse}\n");
+            CAService caService = new CAService(null, caName: "ca-org1");
+            Console.WriteLine("Initilized entity");
+            var jsonResponse = await caService.GetCaInfo();
+            Console.WriteLine($"{jsonResponse}\n");
             // catch exception when server ir not up
             //No connection could be made because the target machine actively refused it.                                              
 
@@ -68,9 +68,9 @@ namespace TestSdkCSharp {
             //Console.WriteLine(certs);
             #endregion get cert info
 
-            var con = await TestRevocation("admin", "adminpw", "appUser68", "");
-            Console.WriteLine("Exit revocation method");
-            Console.WriteLine(con);
+            //var con = await TestRevocation("admin", "adminpw", "appUser68", "");
+            //Console.WriteLine("Exit revocation method");
+            //Console.WriteLine(con);
             #endregion Test Revoke
         }
 

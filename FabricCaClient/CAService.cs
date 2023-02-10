@@ -18,7 +18,11 @@ namespace FabricCaClient
         private string[] revokingReasons = { "unspecified", "keyCompromise", "cACompromise", "affiliationChanged", "superseded", "cessationOfOperation", "certificateHold", "removeFromCRL", "privilegeWithdrawn", "aACompromise" };
 
         // to test
-        public async Task<string> GetCaInfo() {
+        /// <summary>
+        /// Asks for CA basic info.
+        /// </summary>
+        /// <returns>A Tuple{string caName, string caChain, string issuerPK, string issuerRevPK, string version}, indicating values resulted form CA call.</returns>
+        public async Task<Tuple<string, string, string, string, string>> GetCaInfo() {
             return await _caClient.GetCaInfo();
         }
 

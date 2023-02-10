@@ -7,6 +7,7 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using FabricCaClient.Exceptions;
+using System.Text.Json.Nodes;
 
 namespace FabricCaClient {
     /// <summary>
@@ -65,11 +66,34 @@ namespace FabricCaClient {
         }
 
         /// <summary>
-        /// Asks for ca basic info
+        /// Asks for ca basic info.
         /// </summary>
         /// <returns></returns>
-        internal async Task<string> GetCaInfo() {
-            return await GetAsync(caUrlInfo);
+        internal async Task<Tuple<string, string, string, string, string>> GetCaInfo() {
+            try {
+                // get the result field which is Base64-encoded PEM
+                // check verify flag
+                var jsonResponse = await GetAsync(caUrlInfo);
+
+                JObject jsonst = JObject.Parse(jsonResponse);
+                //bool success = jsonst["success"]?.Value<bool>() ?? false;// this is already being checked as EnsureSuccessStatusCode method keep being called.
+
+                JObject result = jsonst["result"] as JObject;
+
+                if (result == null)
+                    throw new Exception("Error in HTTP call, result not found.");
+
+                string caName = result["CAName"]?.Value<string>();
+                string caChain = result["CAChain"]?.Value<string>();
+                string issuerPK = result["IssuerPublicKey"]?.Value<string>();
+                string issuerRevPK = result["IssuerRevocationPublicKey"]?.Value<string>();
+                string version = result["Version"]?.Value<string>();
+
+                return new Tuple<string, string, string, string, string>(caName, caChain, issuerPK, issuerRevPK, version);
+            }
+            catch (Exception exc) {
+                throw (new EnrollmentException("Error in enrollment request.", exc));
+            }
         }
 
         /// <summary>
@@ -114,9 +138,9 @@ namespace FabricCaClient {
 
                 JObject jsonst = JObject.Parse(jsonResponse);
                 //bool success = jsonst["success"]?.Value<bool>() ?? false;// this is already being checked as EnsureSuccessStatusCode method keep being called.
-                
+
                 JObject result = jsonst["result"] as JObject;
-                
+
                 if (result == null)
                     throw new Exception("Error in HTTP call, result not found.");
 
@@ -296,14 +320,24 @@ namespace FabricCaClient {
             }
         }
 
+        /// <summary>
+        /// Makes a get async call to the gicen url.
+        /// </summary>
+        /// <param name="url">url to direct the call.</param>
+        /// <returns>A string resulted from the Http post call.</returns>
         private static async Task<string> GetAsync(string url) {
-            // as per the using keyword specification, this object is disposed correctly after going out of the scope definition
-            using HttpResponseMessage response = await sharedClient.GetAsync(url);
+            try {
+                HttpResponseMessage response = await sharedClient.GetAsync(url);
 
-            response.EnsureSuccessStatusCode();
+                response.EnsureSuccessStatusCode();
 
-            var jsonResponse = await response.Content.ReadAsStringAsync();
-            return jsonResponse;
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                
+                return jsonResponse;
+            }
+            catch (Exception exc) {
+                throw new Exception($"Error in GetAsync call to {url}.", exc);
+            }
         }
 
         /// <summary>
