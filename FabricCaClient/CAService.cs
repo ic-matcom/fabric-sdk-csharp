@@ -4,6 +4,8 @@ using System.Text;
 using System.Security.Cryptography.X509Certificates;
 using System;
 using Org.BouncyCastle.Asn1.X509;
+using System.Net.Sockets;
+using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace FabricCaClient
 {
@@ -49,7 +51,10 @@ namespace FabricCaClient
         /// <param name="attrRqs">A dictionary with attribute requests to be placed into the enrollment certificate. <remarks>Expected format is: "string attrName -> bool optional (wether or not the attr is required)".</remarks></param>
         /// <returns>An <see cref="Enrollment"/> instance with corresponding keypair (generated if csr not provided), enrollment and CA certificates. </returns>
         public async Task<Enrollment> Enroll(string enrollmentId, string enrollmentSecret, string csr = "", string profile = "", Dictionary<string, bool> attrRqs = null) {
-            // this could be checked here    
+            if (string.IsNullOrEmpty(enrollmentId))
+                throw new ArgumentException("Enrollment id is not set. Please provide a valid id for enrollment.");
+            if (string.IsNullOrEmpty(enrollmentSecret))
+                throw new ArgumentException("Enrollment secret is not set. Please provide a valid id for enrollment.");// this could be checked here    
             // if (enrollmentId == "" || enrollmentSecret == "" )
 
             // check attReqs format, is possible one need to reformat here to give the spected form
@@ -76,6 +81,9 @@ namespace FabricCaClient
         /// <param name="attrRqs">A dictionary with attribute requests to be placed into the enrollment certificate. <remarks>Expected format is: "string attrName -> bool optional (wether or not the attr is required)".</remarks></param>
         /// <returns>A new <see cref="Enrollment"/> instance with corresponding keypair, enrollment and CA certificates. </returns>
         public async Task<Enrollment> Reenroll(Enrollment currentUser, Dictionary<string, bool> attrRqs = null) {
+            if (currentUser == null)
+                throw new ArgumentException("currenUser provided is not valid.");
+
             // Check for  attrReqs spected format
             AsymmetricCipherKeyPair privateKey = _cryptoPrimitives.GenerateKeyPair();
 
@@ -108,7 +116,11 @@ namespace FabricCaClient
         /// <param name="affiliatiton">The affiliation of the new identity. If no affliation is provided, the affiliation of the registrar is used.</param>
         /// <returns>A string representing the enrollment secret of the newly registered identity.</returns>
         public async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, Tuple<string, string, bool>[] attrs, Enrollment registrar, string role = "", string affiliatiton = "") {
-            // check enrollmentScret is no ""
+            if (string.IsNullOrEmpty(enrollmentId))
+                throw new ArgumentException("EntrollmentID cannot be null or empty. Please provide an unique id to identify the identity for enrollment.");
+            if (registrar == null)
+                throw new ArgumentException("Registrar should be a valid Enrollment instance.");
+
             return await _caClient.Register(enrollmentId, enrollmentSecret, maxEnrollments, attrs, registrar, role, affiliatiton);
         }
 
@@ -130,8 +142,12 @@ namespace FabricCaClient
         /// <param name="registrar">The instance of a Enrollment encapsulating the identity that perfoms the revocation.</param>
         /// <returns>A base64 encoded PEM-encoded CRL.</returns>
         public async Task<string> Revoke(string enrollmentId, string aki, string serial, string reason, bool genCrl, Enrollment registrar) {
+            if (string.IsNullOrEmpty(enrollmentId) && (string.IsNullOrEmpty(aki) || string.IsNullOrEmpty(serial)))
+                throw new ArgumentException("If an enrollmentId is not provided then aki and serial parameter should reference a proper certificate.");
+            if (registrar == null)
+                throw new ArgumentException("Registrar aka revoker is not set. Please provide a valid Enrollment instance.");
             if (!revokingReasons.Contains(reason))
-                throw new Exception("Revocation reason not found. Please provide one that belongs to those listed in the HF CA specifications");
+                throw new ArgumentException("Revocation reason not found. Please provide one that belongs to those listed in the HF CA specifications");
             return await _caClient.Revoke(enrollmentId, aki, serial, reason, genCrl, registrar);
         }
     }

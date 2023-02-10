@@ -42,7 +42,9 @@ namespace FabricCaClient {
         /// <param name="baseUrl">Ca url where the base api resides. (Default "/api/v1/").</param>
         /// <param name="caCertsPath">Local ca certs path (for trusted root certs).</param>
         /// <param name="caName">Name of the CA to direct traffic to within server as FabricCa servers support multiple Certificate Authorities from a single server.</param>
-        public CAClient(CryptoPrimitives cryptoPrim, string caEnpoint = "", string baseUrl = "", string _caCertsPath = "", string _caName = "") {
+        internal CAClient(CryptoPrimitives cryptoPrim, string caEnpoint = "", string baseUrl = "", string _caCertsPath = "", string _caName = "") {
+            if (cryptoPrim == null)
+                throw new ArgumentException("Crypto primitives not set. Please provide an instance of an ICryptoSuite implementation.");
             cryptoPrimitives = cryptoPrim;
 
             if (caEnpoint != "")
@@ -65,7 +67,7 @@ namespace FabricCaClient {
         /// Asks for ca basic info
         /// </summary>
         /// <returns></returns>
-        public async Task<string> GetCaInfo() {
+        internal async Task<string> GetCaInfo() {
             return await GetAsync(caUrlInfo);
         }
 
@@ -135,7 +137,7 @@ namespace FabricCaClient {
         /// <param name="attrRqs">A dictionary with attribute requests to be placed into the enrollment certificate. <remarks>Expected format is: "string attrName -> bool optional (wether or not the attr is required)".</remarks></param>
         /// <returns>A tuple containing a signed pem certificate and a string with caChain</returns>
         /// <exception cref="Exception"></exception>
-        public async Task<Tuple<string, string>> Reenroll(Enrollment registrar, string csr, Dictionary<string, bool> attrRqs = null) {
+        internal async Task<Tuple<string, string>> Reenroll(Enrollment registrar, string csr, Dictionary<string, bool> attrRqs = null) {
             JObject jsonBody = new JObject {
                 new JProperty("certificate_request", csr)
             };
@@ -192,7 +194,7 @@ namespace FabricCaClient {
         /// <param name="affiliatiton">The affiliation of the new identity. If no affliation is provided, the affiliation of the registrar is used.</param>
         /// <returns>A string representing the enrollment secret of the newly registered identity.</returns>
         /// <exception cref="Exception"></exception>
-        public async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, Tuple<string, string, bool>[] attrs, Enrollment registrar, string role = "", string affiliatiton = "") {
+        internal async Task<string> Register(string enrollmentId, string enrollmentSecret, int maxEnrollments, Tuple<string, string, bool>[] attrs, Enrollment registrar, string role = "", string affiliatiton = "") {
             JObject jsonBody = new JObject {
                 new JProperty("id", enrollmentId),
                 new JProperty("affiliation", affiliatiton),
@@ -258,7 +260,7 @@ namespace FabricCaClient {
         /// <param name="registrar">The instance of a Enrollment encapsulating the identity that perfoms the revocation.</param>
         /// <returns>A base64 encoded PEM-encoded CRL.</returns>
         /// <exception cref="Exception"></exception>
-        public async Task<string> Revoke(string enrollmentId, string aki, string serial, string reason, bool genCrl, Enrollment registrar) {
+        internal async Task<string> Revoke(string enrollmentId, string aki, string serial, string reason, bool genCrl, Enrollment registrar) {
             JObject jsonBody = new JObject {
                 new JProperty("id", enrollmentId),
                 new JProperty("aki", aki),
@@ -292,7 +294,7 @@ namespace FabricCaClient {
             throw (new Exception("Error in revoke request"));
         }
 
-        static async Task<string> GetAsync(string url) {
+        private static async Task<string> GetAsync(string url) {
             // as per the using keyword specification, this object is disposed correctly after going out of the scope definition
             using HttpResponseMessage response = await sharedClient.GetAsync(url);
 
@@ -310,7 +312,7 @@ namespace FabricCaClient {
         /// <param name="idx">Id to used for authentication.</param>
         /// <param name="pass">Password to used for authentication.</param>
         /// <returns>A string resulted from the Http post call.</returns>
-        static async Task<string> PostAsync(string url, string content, string idx = "", string pass = "") {
+        private async Task<string> PostAsync(string url, string content, string idx = "", string pass = "") {
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
 
             request.Content = new StringContent(content, Encoding.UTF8);

@@ -68,7 +68,7 @@ namespace TestSdkCSharp {
             //Console.WriteLine(certs);
             #endregion get cert info
 
-            var con = await TestRevocation("admin", "adminpw", "appUser70", "");
+            var con = await TestRevocation("admin", "adminpw", "appUser69", "");
             Console.WriteLine("Exit revocation method");
             Console.WriteLine(con);
             #endregion Test Revoke
