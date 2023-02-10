@@ -6,6 +6,7 @@ using FabricCaClient.Crypto;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using FabricCaClient.Exceptions;
 
 namespace FabricCaClient {
     /// <summary>
@@ -84,7 +85,7 @@ namespace FabricCaClient {
         /// <exception cref="Exception"></exception>
         public async Task<Tuple<string, string>> Enroll(string enrollmentId, string enrollmentSecret, string csr, string profile = "", Dictionary<string, bool> attrRqs = null) {
             if (enrollmentId == "" || enrollmentSecret == "" || csr == "")
-                throw new ArgumentException($"Missing required parameters: enrollmentId-{enrollmentId}, enrollmentSecret-{enrollmentSecret} and csr-{csr} are all required");
+                throw new ArgumentException($"Missing required parameters: enrollmentId-{enrollmentId}, enrollmentSecret-{enrollmentSecret} and csr-{csr} are all required.");
 
             JObject jsonBody = new JObject {
                 new JProperty("certificate_request", csr)
@@ -106,27 +107,27 @@ namespace FabricCaClient {
                 jsonBody.Add(new JProperty("attr_reqs", attrsArray));
             }
 
-            // get the result field which is Base64-encoded PEM
-            // check verify flag
-            var jsonResponse = await PostAsync(caUrlEnroll, jsonBody.ToString(Formatting.None), enrollmentId, enrollmentSecret);
+            try {
+                // get the result field which is Base64-encoded PEM
+                // check verify flag
+                var jsonResponse = await PostAsync(caUrlEnroll, jsonBody.ToString(Formatting.None), enrollmentId, enrollmentSecret);
 
-            JObject jsonst = JObject.Parse(jsonResponse);
-            bool success = jsonst["success"]?.Value<bool>() ?? false;
-            if (success) {
-                try {
-                    JObject result = jsonst["result"] as JObject;
-                    if (result != null) {
-                        string signedPem = Encoding.UTF8.GetString(Convert.FromBase64String(result["Cert"]?.Value<string>() ?? ""));
-                        string caChain = Encoding.UTF8.GetString(Convert.FromBase64String(result["ServerInfo"]["CAChain"]?.Value<string>() ?? ""));
+                JObject jsonst = JObject.Parse(jsonResponse);
+                //bool success = jsonst["success"]?.Value<bool>() ?? false;// this is already being checked as EnsureSuccessStatusCode method keep being called.
+                
+                JObject result = jsonst["result"] as JObject;
+                
+                if (result == null)
+                    throw new Exception("Error in HTTP call, result not found.");
 
-                        return new Tuple<string, string>(signedPem, caChain);
-                    }
-                }
-                catch (Exception exc) {
-                    throw new Exception("Error in enrollment request", exc);
-                }
+                string signedPem = Encoding.UTF8.GetString(Convert.FromBase64String(result["Cert"]?.Value<string>() ?? ""));
+                string caChain = Encoding.UTF8.GetString(Convert.FromBase64String(result["ServerInfo"]["CAChain"]?.Value<string>() ?? ""));
+
+                return new Tuple<string, string>(signedPem, caChain);
             }
-            throw (new Exception("Error in enrollment request"));
+            catch (Exception exc) {
+                throw (new EnrollmentException("Error in enrollment request.", exc));
+            }
         }
 
         /// <summary>
@@ -156,27 +157,26 @@ namespace FabricCaClient {
                 jsonBody.Add(new JProperty("attr_reqs", attrsArray));
             }
 
-            // check verify flag
-            var jsonResponse = await PostAsync(caUrlReenroll, jsonBody.ToString(Formatting.None), registrar);
+            try {
+                // check verify flag
+                var jsonResponse = await PostAsync(caUrlReenroll, jsonBody.ToString(Formatting.None), registrar);
 
-            JObject jsonst = JObject.Parse(jsonResponse);
-            bool success = jsonst["success"]?.Value<bool>() ?? false;
+                JObject jsonst = JObject.Parse(jsonResponse);
+                //bool success = jsonst["success"]?.Value<bool>() ?? false;
 
-            if (success) {
-                try {
-                    JObject result = jsonst["result"] as JObject;
-                    if (result != null) {
-                        string signedPem = Encoding.UTF8.GetString(Convert.FromBase64String(result["Cert"]?.Value<string>() ?? ""));
-                        string caChain = Encoding.UTF8.GetString(Convert.FromBase64String(result["ServerInfo"]["CAChain"]?.Value<string>() ?? ""));
+                JObject result = jsonst["result"] as JObject;
 
-                        return new Tuple<string, string>(signedPem, caChain);
-                    }
-                }
-                catch (Exception exc) {
-                    throw new Exception("Error in reenrollmente request", exc);
-                }
+                if (result == null)
+                    throw new Exception("Error in HTTP call, result not found.");
+
+                string signedPem = Encoding.UTF8.GetString(Convert.FromBase64String(result["Cert"]?.Value<string>() ?? ""));
+                string caChain = Encoding.UTF8.GetString(Convert.FromBase64String(result["ServerInfo"]["CAChain"]?.Value<string>() ?? ""));
+
+                return new Tuple<string, string>(signedPem, caChain);
             }
-            throw (new Exception("Error in reenrollment request"));
+            catch (Exception exc) {
+                throw (new ReenrollmentException("Error in reenrollment request.", exc));
+            }
         }
 
         /// <summary>
@@ -221,25 +221,26 @@ namespace FabricCaClient {
                 jsonBody.Add(new JProperty("attrs", attrsArray));
             }
 
-            // get the result field which is Base64-encoded PEM
-            // check verify flag
-            var jsonResponse = await PostAsync(caUrlRegister, jsonBody.ToString(Formatting.None), registrar);
+            try {
+                // get the result field which is Base64-encoded PEM
+                // check verify flag
+                var jsonResponse = await PostAsync(caUrlRegister, jsonBody.ToString(Formatting.None), registrar);
 
-            JObject jsonst = JObject.Parse(jsonResponse);
-            bool success = jsonst["success"]?.Value<bool>() ?? false;
-            if (success) {
-                try {
-                    JObject result = jsonst["result"] as JObject;
-                    if (result != null) {
-                        string secret = result["secret"]?.Value<string>();
-                        return secret;
-                    }
-                }
-                catch (Exception exc) {
-                    throw new Exception("Error in register request", exc);
-                }
+                JObject jsonst = JObject.Parse(jsonResponse);
+                //bool success = jsonst["success"]?.Value<bool>() ?? false;
+
+                JObject result = jsonst["result"] as JObject;
+
+                if (result == null)
+                    throw new Exception("Error in HTTP call, result not found.");
+
+                string secret = result["secret"]?.Value<string>();
+
+                return secret;
             }
-            throw (new Exception("Error in register request"));
+            catch (Exception exc) {
+                throw (new RegisterException("Error in register request.", exc));
+            }
         }
 
         /// <summary>
@@ -272,26 +273,27 @@ namespace FabricCaClient {
             if (caName != "")
                 jsonBody.Add(new JProperty("caname", caName));
 
-            // get the result field which is Base64-encoded PEM
-            // check verify flag and caclient attr
-            var jsonResponse = await PostAsync(caUrlRevoke, jsonBody.ToString(Formatting.None), registrar);
+            try {
+                // get the result field which is Base64-encoded PEM
+                // check verify flag and caclient attr
+                var jsonResponse = await PostAsync(caUrlRevoke, jsonBody.ToString(Formatting.None), registrar);
 
-            JObject jsonst = JObject.Parse(jsonResponse);
-            bool success = jsonst["success"]?.Value<bool>() ?? false;
-            if (success) {
-                try {
-                    JObject result = jsonst["result"] as JObject;
-                    if (result != null) {
-                        //verify following converison
-                        string crl = result["CRL"]?.Value<string>();
-                        return crl;
-                    }
-                }
-                catch (Exception exc) {
-                    throw new Exception("Error in revoke request", exc);
-                }
+                JObject jsonst = JObject.Parse(jsonResponse);
+                //bool success = jsonst["success"]?.Value<bool>() ?? false;
+
+                JObject result = jsonst["result"] as JObject;
+
+                if (result == null)
+                    throw new Exception("Error in HTTP call, result not found.");
+
+                //verify following converison
+                string crl = result["CRL"]?.Value<string>();
+
+                return crl;
             }
-            throw (new Exception("Error in revoke request"));
+            catch (Exception exc) {
+                throw (new RevokeException("Error in revoke request.", exc));
+            }
         }
 
         private static async Task<string> GetAsync(string url) {
@@ -321,13 +323,18 @@ namespace FabricCaClient {
             if (idx != "" && pass != "")
                 request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes(idx + ":" + pass)));
 
-            HttpResponseMessage response = await sharedClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            try {
+                HttpResponseMessage response = await sharedClient.SendAsync(request);
+                response.EnsureSuccessStatusCode();
 
-            //deserialize
-            var jsonResponse = await response.Content.ReadAsStringAsync();
+                //deserialize
+                var jsonResponse = await response.Content.ReadAsStringAsync();
 
-            return jsonResponse;
+                return jsonResponse;
+            }
+            catch (Exception exc) {
+                throw new Exception($"Error in PostAsync call to {url}.", exc);
+            }
         }
 
         /// <summary>
@@ -347,12 +354,17 @@ namespace FabricCaClient {
                 request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
             }
 
-            HttpResponseMessage response = await sharedClient.SendAsync(request);
+            try {
+                HttpResponseMessage response = await sharedClient.SendAsync(request);
+                response.EnsureSuccessStatusCode();
 
-            response.EnsureSuccessStatusCode();
+                var jsonResponse = await response.Content.ReadAsStringAsync();
 
-            var jsonResponse = await response.Content.ReadAsStringAsync();
-            return jsonResponse;
+                return jsonResponse;
+            }
+            catch (Exception exc) {
+                throw new Exception($"Error in PostAsync call to {url}.", exc);
+            }
         }
 
         /// <summary>
