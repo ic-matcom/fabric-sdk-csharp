@@ -59,16 +59,14 @@ namespace FabricCaClient {
             caCertsPath = _caCertsPath;
             caName = _caName;
 
-            //var handler = new SocketsHttpHandler {
-            //    PooledConnectionLifetime = TimeSpan.FromMinutes(15) // Recreate every 15 minutes
-            //};
+            var handler = new SocketsHttpHandler {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(15) // Recreate every 15 minutes
+            };
 
-            //HttpClientHandler already uses SocketsHttpHandler under the hood
-            var handler = new HttpClientHandler();
             if (caCertsPath != "") {
-                var rootCertificate = new X509Certificate2(caCertsPath);
-                var rootCertificates = new X509Certificate2Collection(rootCertificate);
-                handler.ServerCertificateCustomValidationCallback = CreateCustomRootValidator(rootCertificates);
+                X509Certificate2Collection rootCertificates =  new X509Certificate2Collection();
+                rootCertificates.ImportFromPemFile(caCertsPath);
+                handler.SslOptions.RemoteCertificateValidationCallback = CreateCustomRootRemoteValidator(rootCertificates, null); // for SocketsHttpHandler
             }
 
             sharedClient = new HttpClient(handler) {
@@ -451,17 +449,6 @@ namespace FabricCaClient {
             string authToken = cert + "." + cryptoPrimitives.Sign(registrar.KeyPair, messageInBytes);
 
             return authToken;
-        }
-
-        /// <summary>
-        /// A delegate that invokes a custom RemoteCertificateValidationCallback to validate that ssl communications are stablished via the owners of the given roots and intermediate certs.
-        /// </summary>
-        /// <param name="trustedRoots">A collection of the trusted X509Certificate2s as roots.</param>
-        /// <param name="intermediates">A collection of the trusted X509Certificate2s as intermediates.</param>
-        /// <returns>A RemoteCertificateValidationCallback that takes into account the given certificates.</returns>
-        public static Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> CreateCustomRootValidator(X509Certificate2Collection trustedRoots, X509Certificate2Collection intermediates = null) {
-            RemoteCertificateValidationCallback callback = CreateCustomRootRemoteValidator(trustedRoots, intermediates);
-            return (message, serverCert, chain, errors) => callback(null, serverCert, chain, errors);
         }
 
         /// <summary>
