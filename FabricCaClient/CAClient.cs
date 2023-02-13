@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using FabricCaClient.Exceptions;
 using System.Text.Json.Nodes;
 using System.Net.Sockets;
+using System.Runtime.ConstrainedExecution;
 
 namespace FabricCaClient {
     /// <summary>
@@ -41,26 +42,35 @@ namespace FabricCaClient {
         /// Constructor for CAClient class.
         /// </summary>
         /// <param name="cryptoPrimitives">An instance of a Crypto Suite for PKI key creation/signing/verification.</param>
-        /// <param name="caEnpoint">Http URL for the Fabric's certificate authority services endpoint.</param>
+        /// <param name="caEndpoint">Http URL for the Fabric's certificate authority services endpoint.</param>
         /// <param name="baseUrl">Ca url where the base api resides. (Default "/api/v1/").</param>
         /// <param name="caCertsPath">Local ca certs path (for trusted root certs).</param>
         /// <param name="caName">Name of the CA to direct traffic to within server as FabricCa servers support multiple Certificate Authorities from a single server.</param>
-        internal CAClient(CryptoPrimitives cryptoPrim, string caEnpoint = "", string baseUrl = "", string _caCertsPath = "", string _caName = "") {
+        internal CAClient(CryptoPrimitives cryptoPrim, string caEndpoint = "", string baseUrl = "", string _caCertsPath = "", string _caName = "") {
             if (cryptoPrim == null)
                 throw new ArgumentException("Crypto primitives not set. Please provide an instance of an ICryptoSuite implementation.");
             cryptoPrimitives = cryptoPrim;
 
-            if (caEnpoint != "")
-                defaultCaEndpoint = caEnpoint;
+            if (caEndpoint != "")
+                defaultCaEndpoint = caEndpoint;
             if (baseUrl != "")
-                defaultCaBaseUrl = caEnpoint;
+                defaultCaBaseUrl = caEndpoint;
 
             caCertsPath = _caCertsPath;
             caName = _caName;
 
-            var handler = new SocketsHttpHandler {
-                PooledConnectionLifetime = TimeSpan.FromMinutes(15) // Recreate every 15 minutes
-            };
+            //var handler = new SocketsHttpHandler {
+            //    PooledConnectionLifetime = TimeSpan.FromMinutes(15) // Recreate every 15 minutes
+            //};
+
+            //HttpClientHandler already uses SocketsHttpHandler under the hood
+            var handler = new HttpClientHandler();
+            if (caCertsPath != "") {
+                var rootCertificate = new X509Certificate2(caCertsPath);
+                var rootCertificates = new X509Certificate2Collection(rootCertificate);
+                handler.ServerCertificateCustomValidationCallback = CreateCustomRootValidator(rootCertificates);
+            }
+
             sharedClient = new HttpClient(handler) {
                 BaseAddress = new Uri(defaultCaEndpoint + defaultCaBaseUrl),
             };
@@ -349,7 +359,7 @@ namespace FabricCaClient {
                 response.EnsureSuccessStatusCode();
 
                 var jsonResponse = await response.Content.ReadAsStringAsync();
-                
+
                 return jsonResponse;
             }
             catch (Exception exc) {
@@ -441,6 +451,59 @@ namespace FabricCaClient {
             string authToken = cert + "." + cryptoPrimitives.Sign(registrar.KeyPair, messageInBytes);
 
             return authToken;
+        }
+
+        /// <summary>
+        /// A delegate that invokes a custom RemoteCertificateValidationCallback to validate that ssl communications are stablished via the owners of the given roots and intermediate certs.
+        /// </summary>
+        /// <param name="trustedRoots">A collection of the trusted X509Certificate2s as roots.</param>
+        /// <param name="intermediates">A collection of the trusted X509Certificate2s as intermediates.</param>
+        /// <returns>A RemoteCertificateValidationCallback that takes into account the given certificates.</returns>
+        public static Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> CreateCustomRootValidator(X509Certificate2Collection trustedRoots, X509Certificate2Collection intermediates = null) {
+            RemoteCertificateValidationCallback callback = CreateCustomRootRemoteValidator(trustedRoots, intermediates);
+            return (message, serverCert, chain, errors) => callback(null, serverCert, chain, errors);
+        }
+
+        /// <summary>
+        /// Creates a custom RemoteCertificateValidationCallback to validate that ssl communications are stablished via the owners of the given roots and intermediate certs.
+        /// </summary>
+        /// <param name="trustedRoots">A collection of the trusted X509Certificate2s as roots.</param>
+        /// <param name="intermediates">A collection of the trusted X509Certificate2s as intermediates.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public static RemoteCertificateValidationCallback CreateCustomRootRemoteValidator(X509Certificate2Collection trustedRoots, X509Certificate2Collection intermediates = null) {
+            if (trustedRoots == null)
+                throw new ArgumentNullException(nameof(trustedRoots));
+            if (trustedRoots.Count == 0)
+                throw new ArgumentException("No trusted roots provided", nameof(trustedRoots));
+
+            X509Certificate2Collection roots = new X509Certificate2Collection(trustedRoots);
+            X509Certificate2Collection intermeds = null;
+
+            if (intermediates != null)
+                intermeds = new X509Certificate2Collection(intermediates);
+
+            intermediates = null;
+            trustedRoots = null;
+
+            return (sender, certificate, chain, errors) => {
+                if ((errors & ~SslPolicyErrors.RemoteCertificateChainErrors) != 0)
+                    return false;
+
+                for (int i = 1; i < chain.ChainElements.Count; i++) {
+                    chain.ChainPolicy.ExtraStore.Add(chain.ChainElements[i].Certificate);
+                }
+
+                if (intermeds != null)
+                    chain.ChainPolicy.ExtraStore.AddRange(intermeds);
+
+                chain.ChainPolicy.CustomTrustStore.Clear();
+                chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                chain.ChainPolicy.CustomTrustStore.AddRange(roots);
+                
+                return chain.Build((X509Certificate2)certificate);
+            };
         }
     }
 }

@@ -17,6 +17,26 @@ namespace FabricCaClient
         private CAClient _caClient;
         private string[] revokingReasons = { "unspecified", "keyCompromise", "cACompromise", "affiliationChanged", "superseded", "cessationOfOperation", "certificateHold", "removeFromCRL", "privilegeWithdrawn", "aACompromise" };
 
+        
+        /// <summary>
+        /// Constructor for CAService class.
+        /// </summary>
+        /// <param name="cryptoPrimitives">An instance of a Crypto Suite for PKI key creation/signing/verification. Provide null for use of default implementation.</param>
+        /// <param name="caEndpoint">Http URL for the Fabric's certificate authority services endpoint.</param>
+        /// <param name="baseUrl">Ca url where the base api resides. (Default "/api/v1/").</param>
+        /// <param name="caCertsPath">Local ca certs path (for trusted root certs).</param>
+        /// <param name="caName">Name of the CA to direct traffic to within server as FabricCa servers support multiple Certificate Authorities from a single server.</param>
+        public CAService(CryptoPrimitives cryptoPrimitives, string caEndpoint = "", string baseUrl = "", string caCertsPath = "", string caName = "") {
+            if (cryptoPrimitives != null) {
+                _cryptoPrimitives = cryptoPrimitives;
+            }
+            else {
+                _cryptoPrimitives = new CryptoPrimitives();
+            }
+
+            _caClient = new CAClient(_cryptoPrimitives, caEndpoint, baseUrl, caCertsPath, caName);
+        }
+
         /// <summary>
         /// Returns CaName.
         /// </summary>
@@ -33,7 +53,7 @@ namespace FabricCaClient
         public CryptoPrimitives GetCryptoSuite() {
             return _caClient.GetCryptoSuite();
         }
-        
+
         // to test
         /// <summary>
         /// Asks for CA basic info.
@@ -41,25 +61,6 @@ namespace FabricCaClient
         /// <returns>A Tuple{string caName, string caChain, string issuerPK, string issuerRevPK, string version}, indicating values resulted form CA call.</returns>
         public async Task<Tuple<string, string, string, string, string>> GetCaInfo() {
             return await _caClient.GetCaInfo();
-        }
-
-        /// <summary>
-        /// Constructor for CAService class.
-        /// </summary>
-        /// <param name="cryptoPrimitives">An instance of a Crypto Suite for PKI key creation/signing/verification. Provide null for use of default implementation.</param>
-        /// <param name="caEnpoint">Http URL for the Fabric's certificate authority services endpoint.</param>
-        /// <param name="baseUrl">Ca url where the base api resides. (Default "/api/v1/").</param>
-        /// <param name="caCertsPath">Local ca certs path (for trusted root certs).</param>
-        /// <param name="caName">Name of the CA to direct traffic to within server as FabricCa servers support multiple Certificate Authorities from a single server.</param>
-        public CAService(CryptoPrimitives cryptoPrimitives, string caEnpoint = "", string baseUrl = "", string caCertsPath = "", string caName = "") {
-            if (cryptoPrimitives != null) {
-                _cryptoPrimitives = cryptoPrimitives;
-            }
-            else {
-                _cryptoPrimitives = new CryptoPrimitives();
-            }
-
-            _caClient = new CAClient(_cryptoPrimitives, caEnpoint, baseUrl, caCertsPath, caName);
         }
 
         /// <summary>

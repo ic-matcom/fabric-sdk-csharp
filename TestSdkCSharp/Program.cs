@@ -70,26 +70,36 @@ namespace TestSdkCSharp {
             //Console.WriteLine(certs);
             #endregion get cert info
 
-            //var con = await TestRevocation("admin", "adminpw", "appUser68", "");
+            //var con = await TestRevocation("admin", "adminpw", "appUser59", "", caEndpoint: "https://localhost:7054", caCertsPath: "ca-cert.pem");
             //Console.WriteLine("Exit revocation method");
             //Console.WriteLine(con);
             #endregion Test Revoke
 
             #region Test Enroll with csr
-            CAService caService = new CAService(null, caName: "ca-org1");
-            Console.WriteLine("Initilized entity");
-            var cryptoPrimitives = new CryptoPrimitives();
-            var keyPair = cryptoPrimitives.GenerateKeyPair();
-            var csr = cryptoPrimitives.GenerateCSR(keyPair, "admin");
+            //CAService caService = new CAService(null, caName: "ca-org1");
+            //Console.WriteLine("Initilized entity");
+            //var cryptoPrimitives = new CryptoPrimitives();
+            //var keyPair = cryptoPrimitives.GenerateKeyPair();
+            //var csr = cryptoPrimitives.GenerateCSR(keyPair, "admin");
 
-            Enrollment enr = await caService.Enroll("admin", "adminpw",csr:csr);
-            PrintEnrollmentInstance(enr);
+            //Enrollment enr = await caService.Enroll("admin", "adminpw",csr:csr);
+            //PrintEnrollmentInstance(enr);
             #endregion Test Enroll with csr
+
+            #region Test enroll with ssl
+            //CAService caService = new CAService(null, caEndpoint: "https://localhost:7054", caName: "ca-org1");
+
+            CAService caService = new CAService(null, caEndpoint: "https://localhost:7054", caName: "ca-org1", caCertsPath: "ca-cert.pem");
+
+            Enrollment enr = await caService.Enroll("admin", "adminpw");
+            PrintEnrollmentInstance(enr);
+            #endregion Test enroll with ssl
+
         }
 
-        static public async Task<string> TestRevocation(string registrarName, string registrarSecret, string userId, string userSecret = "", int maxEnrollment = 10) {
+        static public async Task<string> TestRevocation(string registrarName, string registrarSecret, string userId, string userSecret = "", int maxEnrollment = 10, string caEndpoint = "", string caCertsPath= "") {
             Console.WriteLine("Enter revocation method");
-            CAService caService = new CAService(null, caName: "ca-org1");
+            CAService caService = new CAService(null, caEndpoint:caEndpoint, caName: "ca-org1", caCertsPath: caCertsPath);
             Enrollment enr = await caService.Enroll(registrarName, registrarSecret);
             Console.WriteLine("Admin enrolled");
 
