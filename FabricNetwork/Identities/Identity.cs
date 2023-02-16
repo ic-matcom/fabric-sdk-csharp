@@ -1,9 +1,9 @@
 ﻿using Newtonsoft.Json.Linq;
 using Org.BouncyCastle.Crypto;
 
-namespace FabricNetwork {
+namespace FabricNetwork.Identities {
     public interface Identity {
-        
+
         /// <summary>
         /// Retrieve the member services provider to which this identity is associated.
         /// </summary>

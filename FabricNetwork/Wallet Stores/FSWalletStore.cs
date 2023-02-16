@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Collections;
 
-namespace FabricNetwork {
+namespace FabricNetwork.Wallets {
     public class FSWalletStore : WalletStore {
         public string StorePath;
         private const string idFileSuffix = ".id";
@@ -35,7 +35,7 @@ namespace FabricNetwork {
 
                 // Leaving the list in just identitie's label
                 for (int i = 0; i < idList.Length; i++) {
-                    idList[i] = idList[i].Substring(StorePath.Length + 1, (idList[i].Length - idFileSuffix.Length) - StorePath.Length - 1);
+                    idList[i] = idList[i].Substring(StorePath.Length + 1, idList[i].Length - idFileSuffix.Length - StorePath.Length - 1);
                 }
 
                 return idList;
@@ -47,7 +47,7 @@ namespace FabricNetwork {
 
         public void Put(string label, string identityData) {
             string identityPath = GetFilePath(label);
-            
+
             try {
                 File.WriteAllText(identityPath, identityData);
             }
@@ -68,7 +68,7 @@ namespace FabricNetwork {
         }
 
         private string GetFilePath(string label) {
-            return Path.Combine(StorePath, label + idFileSuffix); 
+            return Path.Combine(StorePath, label + idFileSuffix);
         }
     }
 }

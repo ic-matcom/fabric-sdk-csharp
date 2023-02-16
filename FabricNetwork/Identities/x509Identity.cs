@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 using System.Runtime.ConstrainedExecution;
 using Org.BouncyCastle.OpenSsl;
 
-namespace FabricNetwork {
+namespace FabricNetwork.Identities {
     public class X509Identity : Identity {
         private const string typeId = "X.509";
         private const string version = "1";
@@ -83,7 +83,7 @@ namespace FabricNetwork {
                 }
 
                 string mspId = jsonIdentity[jsonMspId].Value<string>();
-                JObject credentials = (jsonIdentity[jsonCredentials] as JObject);
+                JObject credentials = jsonIdentity[jsonCredentials] as JObject;
                 string cert = credentials[jsonCertificate].Value<string>();
                 string pk = credentials[jsonPrivateKey].Value<string>();
 

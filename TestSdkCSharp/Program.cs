@@ -1,13 +1,15 @@
 ﻿using FabricCaClient;
 using FabricCaClient.Crypto;
-using FabricNetwork;
+using FabricNetwork.Identities;
+using FabricNetwork.Wallets;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.X509;
 using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace TestSdkCSharp {
+namespace TestSdkCSharp
+{
     internal class Program {
         static async Task Main(string[] args) {
             //CAClient caclient = new CAClient();
@@ -108,25 +110,25 @@ namespace TestSdkCSharp {
             #endregion Enroll and save admin data
 
             #region retrieve admin data
-            //var adminIdentity = wallet.Get("admin");
-            //Enrollment enr = new Enrollment(adminIdentity.GetPrivateKey(), adminIdentity.GetCertificate(), null, caService);
+            var adminIdentity = wallet.Get("admin");
+            Enrollment enr = new Enrollment(adminIdentity.GetPrivateKey(), adminIdentity.GetCertificate(), null, caService);
             #endregion retrieve admin data
 
-            //string secret = await caService.Register("usr3", "", 10, null, enr);
+            string secret = await caService.Register("usr4", "", 10, null, enr);
 
-            //Enrollment enr2 = await caService.Enroll("usr3", secret);
+            Enrollment enr2 = await caService.Enroll("usr4", secret);
 
-            //X509Identity identity = new X509Identity(enr2.Cert, enr2.KeyPair, "Org1MSP");
+            X509Identity identity = new X509Identity(enr2.Cert, enr2.KeyPair, "Org1MSP");
             //Console.WriteLine("----------Initial Identity----------");
             //PrintIdentity(identity);
-            //wallet.Put("usr3", identity);
+            wallet.Put("usr4", identity);
             //var newIdentity = wallet.Get("usr3");
             //Console.WriteLine();
             //Console.WriteLine("----------Second Identity----------");
             //PrintIdentity(newIdentity);
 
             #region Remove identity
-            wallet.Remove("usr3");
+            wallet.Remove("usr4");
             #endregion Remove identity
 
 
