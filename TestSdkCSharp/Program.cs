@@ -1,5 +1,6 @@
 ﻿using FabricCaClient;
 using FabricCaClient.Crypto;
+using FabricNetwork;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.X509;
 using System.Runtime.ConstrainedExecution;
@@ -70,7 +71,7 @@ namespace TestSdkCSharp {
             //Console.WriteLine(certs);
             #endregion get cert info
 
-            //var con = await TestRevocation("admin", "adminpw", "appUser59", "", caEndpoint: "https://localhost:7054", caCertsPath: "ca-cert.pem");
+            //var con = await TestRevocation("admin", "adminpw", "appUser55", "", caEndpoint: "https://localhost:7054", caCertsPath: "ca-cert.pem");
             //Console.WriteLine("Exit revocation method");
             //Console.WriteLine(con);
             #endregion Test Revoke
@@ -89,17 +90,61 @@ namespace TestSdkCSharp {
             #region Test enroll with ssl
             //CAService caService = new CAService(null, caEndpoint: "https://localhost:7054", caName: "ca-org1");
 
-            CAService caService = new CAService(null, caEndpoint: "https://localhost:7054", caName: "ca-org1", caCertsPath: "ca-cert.pem");
+            //CAService caService = new CAService(null, caEndpoint: "https://localhost:7054", caName: "ca-org1", caCertsPath: "ca-cert.pem");
 
-            Enrollment enr = await caService.Enroll("admin", "adminpw");
-            PrintEnrollmentInstance(enr);
+            //Enrollment enr = await caService.Enroll("admin", "adminpw");
+            //PrintEnrollmentInstance(enr);
             #endregion Test enroll with ssl
+
+            #region Test Wallet
+            CAService caService = new CAService(null, caEndpoint: "https://localhost:7054", caName: "ca-org1", caCertsPath: "ca-cert.pem");
+            //creating File System Wallet
+            Wallet wallet = new Wallet(new FSWalletStore("D:\\CS\\TesisHF\\Repos\\Test15\\walletDir"));
+
+            #region Enroll and save admin data
+            //Enrollment enr = await caService.Enroll("admin", "adminpw");
+            //X509Identity identity = new X509Identity(enr.Cert, enr.KeyPair, "Org1MSP");
+            //wallet.Put("admin", identity);
+            #endregion Enroll and save admin data
+
+            #region retrieve admin data
+            //var adminIdentity = wallet.Get("admin");
+            //Enrollment enr = new Enrollment(adminIdentity.GetPrivateKey(), adminIdentity.GetCertificate(), null, caService);
+            #endregion retrieve admin data
+
+            //string secret = await caService.Register("usr3", "", 10, null, enr);
+
+            //Enrollment enr2 = await caService.Enroll("usr3", secret);
+
+            //X509Identity identity = new X509Identity(enr2.Cert, enr2.KeyPair, "Org1MSP");
+            //Console.WriteLine("----------Initial Identity----------");
+            //PrintIdentity(identity);
+            //wallet.Put("usr3", identity);
+            //var newIdentity = wallet.Get("usr3");
+            //Console.WriteLine();
+            //Console.WriteLine("----------Second Identity----------");
+            //PrintIdentity(newIdentity);
+
+            #region Remove identity
+            wallet.Remove("usr3");
+            #endregion Remove identity
+
+
+            #region get identity list
+            var idenList = wallet.List();
+            Console.WriteLine("Identity list");
+            foreach (var id in idenList) {
+                Console.WriteLine(id);
+            }
+            #endregion get identity list
+
+            #endregion Test Wallet
 
         }
 
-        static public async Task<string> TestRevocation(string registrarName, string registrarSecret, string userId, string userSecret = "", int maxEnrollment = 10, string caEndpoint = "", string caCertsPath= "") {
+        static public async Task<string> TestRevocation(string registrarName, string registrarSecret, string userId, string userSecret = "", int maxEnrollment = 10, string caEndpoint = "", string caCertsPath = "") {
             Console.WriteLine("Enter revocation method");
-            CAService caService = new CAService(null, caEndpoint:caEndpoint, caName: "ca-org1", caCertsPath: caCertsPath);
+            CAService caService = new CAService(null, caEndpoint: caEndpoint, caName: "ca-org1", caCertsPath: caCertsPath);
             Enrollment enr = await caService.Enroll(registrarName, registrarSecret);
             Console.WriteLine("Admin enrolled");
 
@@ -146,6 +191,48 @@ namespace TestSdkCSharp {
 
                 //// extract Public key (PEM)
                 var publicKeyInfo = SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(enr.KeyPair.Public);
+                var publicKeyPem = Convert.ToBase64String(publicKeyInfo.GetDerEncoded());
+                publicKeyPem = Regex.Replace(publicKeyPem, ".{64}", "$0\n");
+                strBuilder.Clear();
+                strBuilder.AppendLine($"-----BEGIN PUBLIC KEY-----");
+                strBuilder.AppendLine(publicKeyPem);
+                strBuilder.AppendLine($"-----END PUBLIC KEY-----");
+                publicKeyPem = strBuilder.ToString();
+
+                //Console.WriteLine(enr.KeyPair.Public);
+                Console.WriteLine(publicKeyPem);
+            }
+        }
+
+        static public void PrintIdentity(X509Identity ident) {
+            Console.WriteLine("Identity:");
+            Console.WriteLine("MSP Id");
+            Console.WriteLine(ident.GetMspId());
+            Console.WriteLine("Certificate:");
+            Console.WriteLine(ident.GetCertificate());
+            //Console.WriteLine("Key:");
+            //Console.WriteLine(ident.GetPrivateKey);
+            var kPair = ident.GetPrivateKey();
+
+            Console.WriteLine("Private key:");
+            //Console.WriteLine(enr.KeyPair.Private);
+            //// extract private key
+            if (kPair != null) {
+                var privateKeyInfo = PrivateKeyInfoFactory.CreatePrivateKeyInfo(kPair.Private);
+                var privateKeyPem = Convert.ToBase64String(privateKeyInfo.GetDerEncoded());
+                privateKeyPem = Regex.Replace(privateKeyPem, ".{64}", "$0\n");
+                var strBuilder = new StringBuilder();
+                strBuilder.AppendLine($"-----BEGIN PRIVATE KEY-----");
+                strBuilder.AppendLine(privateKeyPem);
+                strBuilder.AppendLine($"-----END PRIVATE KEY-----");
+                privateKeyPem = strBuilder.ToString();
+                Console.WriteLine(privateKeyPem);
+
+
+                Console.WriteLine("Public key:");
+
+                //// extract Public key (PEM)
+                var publicKeyInfo = SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(kPair.Public);
                 var publicKeyPem = Convert.ToBase64String(publicKeyInfo.GetDerEncoded());
                 publicKeyPem = Regex.Replace(publicKeyPem, ".{64}", "$0\n");
                 strBuilder.Clear();

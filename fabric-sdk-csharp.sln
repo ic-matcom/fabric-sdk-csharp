@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FabricCaClient", "FabricCaClient\FabricCaClient.csproj", "{31205407-072B-464E-8721-043C83DAC571}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricCaClient", "FabricCaClient\FabricCaClient.csproj", "{31205407-072B-464E-8721-043C83DAC571}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestSdkCSharp", "TestSdkCSharp\TestSdkCSharp.csproj", "{7427E364-69FA-4482-ABB8-6B576AB766D2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestSdkCSharp", "TestSdkCSharp\TestSdkCSharp.csproj", "{7427E364-69FA-4482-ABB8-6B576AB766D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FabricNetwork", "FabricNetwork\FabricNetwork.csproj", "{083F7B31-331A-4220-A7B8-06486008B30A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{7427E364-69FA-4482-ABB8-6B576AB766D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7427E364-69FA-4482-ABB8-6B576AB766D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7427E364-69FA-4482-ABB8-6B576AB766D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{083F7B31-331A-4220-A7B8-06486008B30A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{083F7B31-331A-4220-A7B8-06486008B30A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{083F7B31-331A-4220-A7B8-06486008B30A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{083F7B31-331A-4220-A7B8-06486008B30A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
