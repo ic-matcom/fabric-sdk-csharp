@@ -446,7 +446,7 @@ namespace FabricCaClient {
             byte[] messageInBytes = Encoding.UTF8.GetBytes(message);
 
             // sign message
-            string authToken = cert + "." + cryptoPrimitives.Sign(registrar.KeyPair, messageInBytes);
+            string authToken = cert + "." + cryptoPrimitives.Sign(registrar.PrivateKey, messageInBytes);
 
             return authToken;
         }

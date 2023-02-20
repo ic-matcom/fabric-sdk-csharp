@@ -71,27 +71,26 @@ namespace FabricCaClient
         /// <param name="csr">A PEM-encoded string containing the CSR (Certificate Signing Request) based on PKCS #10. (Optional parameter as it can be generated from enrollmentId and secret).</param>
         /// <param name="profile">The name of the signing profile to use when issuing the certificate.'tls' for a TLS certificate; otherwise, an enrollment certificate is issued.</param>
         /// <param name="attrRqs">A dictionary with attribute requests to be placed into the enrollment certificate. <remarks>Expected format is: "string attrName -> bool optional (wether or not the attr is required)".</remarks></param>
-        /// <returns>An <see cref="Enrollment"/> instance with corresponding keypair (generated randomly if csr not provided null otherwise), enrollment and CA certificates. </returns>
+        /// <returns>An <see cref="Enrollment"/> instance with corresponding privateKey (generated randomly if csr not provided null otherwise), enrollment and CA certificates. </returns>
         public async Task<Enrollment> Enroll(string enrollmentId, string enrollmentSecret, string csr = "", string profile = "", Dictionary<string, bool> attrRqs = null) {
             if (string.IsNullOrEmpty(enrollmentId))
                 throw new ArgumentException("Enrollment id is not set. Please provide a valid id for enrollment.");
             if (string.IsNullOrEmpty(enrollmentSecret))
                 throw new ArgumentException("Enrollment secret is not set. Please provide a valid id for enrollment.");  
 
-            AsymmetricCipherKeyPair keyPair;
+            AsymmetricKeyParameter privateKey;
             if (csr == "") {
-                keyPair = _cryptoPrimitives.GenerateKeyPair();
+                AsymmetricCipherKeyPair keyPair = _cryptoPrimitives.GenerateKeyPair();
                 csr = _cryptoPrimitives.GenerateCSR(keyPair, enrollmentId);
+                privateKey = keyPair.Private;
             }
             else {
-                keyPair = null;
-                //keyPair = new AsymmetricCipherKeyPair(null, null);// ver si esta ok trabajar con estos tipos asymCkp o resulta mejor implementar uno con strings
+                privateKey = null;
             }
 
             Tuple<string, string> certs = await _caClient.Enroll(enrollmentId, enrollmentSecret, csr, profile, attrRqs);
 
-            // check pkey isnt use where csr is provided
-            return new Enrollment(keyPair, certs.Item1, certs.Item2, this);
+            return new Enrollment(privateKey, certs.Item1, certs.Item2, this);
         }
 
         /// <summary>
@@ -99,7 +98,7 @@ namespace FabricCaClient
         /// </summary>
         /// <param name="currentUser">The identity of the user that holds the existing enrollment certificate.</param>
         /// <param name="attrRqs">A dictionary with attribute requests to be placed into the enrollment certificate. <remarks>Expected format is: "string attrName -> bool optional (wether or not the attr is required)".</remarks></param>
-        /// <returns>A new <see cref="Enrollment"/> instance with corresponding keypair, enrollment and CA certificates. </returns>
+        /// <returns>A new <see cref="Enrollment"/> instance with corresponding privateKey, enrollment and CA certificates. </returns>
         public async Task<Enrollment> Reenroll(Enrollment currentUser, Dictionary<string, bool> attrRqs = null) {
             if (currentUser == null)
                 throw new ArgumentException("currenUser provided is not valid.");
@@ -118,7 +117,7 @@ namespace FabricCaClient
 
             Tuple<string, string> certs = await _caClient.Reenroll(currentUser, csr, attrRqs);
 
-            return new Enrollment(privateKey, certs.Item1, certs.Item2, this);
+            return new Enrollment(privateKey.Private, certs.Item1, certs.Item2, this);
         }
 
         /// <summary>

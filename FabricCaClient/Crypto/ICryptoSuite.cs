@@ -42,7 +42,9 @@ namespace FabricCaClient.Crypto {
         /// <param name="keyPair">Key pair with private key to use for signing.</param>
         /// <param name="messageToSign">Message to be signed with a given hashing function.</param>
         /// <returns>Signed message.</returns>
-        public string Sign(AsymmetricCipherKeyPair keyPair, byte[] messageToSign);
+        //public string Sign(AsymmetricCipherKeyPair keyPair, byte[] messageToSign);
+        public string Sign(AsymmetricKeyParameter privateKey, byte[] messageToSign);
+
 
         ///// <summary>
         ///// Verifies the signature.
