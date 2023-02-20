@@ -2,6 +2,9 @@
 using Org.BouncyCastle.Crypto;
 
 namespace FabricNetwork.Identities {
+    /// <summary>
+    /// Interface to represent the common behavior expected of all identity implementations.
+    /// </summary>
     public interface Identity {
 
         /// <summary>
