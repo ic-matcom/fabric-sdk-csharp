@@ -18,11 +18,10 @@ namespace FabricNetwork.Identities {
 
 
         private string Certificate;
-        //private string PrivateKey;
-        private AsymmetricCipherKeyPair PrivateKey;
+        private AsymmetricKeyParameter PrivateKey;
         private string MSPId;
 
-        public X509Identity(string certificate, AsymmetricCipherKeyPair privateKey, string mspId) {
+        public X509Identity(string certificate, AsymmetricKeyParameter privateKey, string mspId) {
             Certificate = certificate;
             PrivateKey = privateKey;
             MSPId = mspId;
@@ -36,12 +35,12 @@ namespace FabricNetwork.Identities {
             return MSPId;
         }
 
-        public AsymmetricCipherKeyPair GetPrivateKey() {
+        public AsymmetricKeyParameter GetPrivateKey() {
             return PrivateKey;
         }
 
         // consider moving to enrollment or a different utitilities file
-        public static string ToPemString(AsymmetricCipherKeyPair certificate) {
+        public static string ToPemString(AsymmetricKeyParameter certificate) {
             StringWriter stringWriter = new StringWriter();
             try {
                 PemWriter pemWriter = new PemWriter(stringWriter);
@@ -90,8 +89,8 @@ namespace FabricNetwork.Identities {
                 AsymmetricKeyParameter signingKey;
                 using (var textReader = new StringReader(pk)) {
                     PemReader pemReader = new PemReader(textReader);
-                    var keyPair = pemReader.ReadObject() as AsymmetricCipherKeyPair;
-                    return new X509Identity(cert, keyPair, mspId);
+                    var privateKey = pemReader.ReadObject() as AsymmetricCipherKeyPair;
+                    return new X509Identity(cert, privateKey.Private, mspId);
                 }
             }
             catch (Exception exc) {

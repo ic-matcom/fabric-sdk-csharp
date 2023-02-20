@@ -20,7 +20,7 @@ namespace FabricNetwork.Identities {
         /// Retrieve the identitity's private key.
         /// </summary>
         /// <returns></returns>
-        public AsymmetricCipherKeyPair GetPrivateKey();
+        public AsymmetricKeyParameter GetPrivateKey();
 
         /// <summary>
         /// Converts identity to jason format for proper storage.
