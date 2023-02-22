@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FabricCaClient.Exceptions {
     [Serializable]
-    internal class RevokeException : Exception {
+    public class RevokeException : Exception {
         public RevokeException() { }
 
         public RevokeException(string message) : base(message) { }

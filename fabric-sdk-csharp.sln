@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricCaClient", "FabricCaC
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestSdkCSharp", "TestSdkCSharp\TestSdkCSharp.csproj", "{7427E364-69FA-4482-ABB8-6B576AB766D2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FabricNetwork", "FabricNetwork\FabricNetwork.csproj", "{083F7B31-331A-4220-A7B8-06486008B30A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricNetwork", "FabricNetwork\FabricNetwork.csproj", "{083F7B31-331A-4220-A7B8-06486008B30A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{871A1E27-3982-4904-A177-28533C0EB2AE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{083F7B31-331A-4220-A7B8-06486008B30A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{083F7B31-331A-4220-A7B8-06486008B30A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{083F7B31-331A-4220-A7B8-06486008B30A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{871A1E27-3982-4904-A177-28533C0EB2AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{871A1E27-3982-4904-A177-28533C0EB2AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{871A1E27-3982-4904-A177-28533C0EB2AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{871A1E27-3982-4904-A177-28533C0EB2AE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
