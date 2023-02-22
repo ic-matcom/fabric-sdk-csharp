@@ -64,9 +64,14 @@ namespace FabricCaClient {
             };
 
             if (caCertsPath != "") {
-                X509Certificate2Collection rootCertificates =  new X509Certificate2Collection();
-                rootCertificates.ImportFromPemFile(caCertsPath);
-                handler.SslOptions.RemoteCertificateValidationCallback = CreateCustomRootRemoteValidator(rootCertificates, null); // for SocketsHttpHandler
+                try {
+                    X509Certificate2Collection rootCertificates = new X509Certificate2Collection();
+                    rootCertificates.ImportFromPemFile(caCertsPath);
+                    handler.SslOptions.RemoteCertificateValidationCallback = CreateCustomRootRemoteValidator(rootCertificates, null); // for SocketsHttpHandler
+                }
+                catch (FileNotFoundException exc) {
+                    throw new Exception("Could not load ssl certificate, invalid source path", exc);
+                }
             }
 
             sharedClient = new HttpClient(handler) {
@@ -446,7 +451,7 @@ namespace FabricCaClient {
             byte[] messageInBytes = Encoding.UTF8.GetBytes(message);
 
             // sign message
-            string authToken = cert + "." + cryptoPrimitives.Sign(registrar.KeyPair, messageInBytes);
+            string authToken = cert + "." + cryptoPrimitives.Sign(registrar.PrivateKey, messageInBytes);
 
             return authToken;
         }

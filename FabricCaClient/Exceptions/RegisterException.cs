@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FabricCaClient.Exceptions {
     [Serializable]
-    internal class RegisterException : Exception {
+    public class RegisterException : Exception {
         public RegisterException() { }
 
         public RegisterException(string message) : base(message) { }

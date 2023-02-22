@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FabricCaClient.Exceptions {
     [Serializable]
-    internal class EnrollmentException : Exception {
+    public class EnrollmentException : Exception {
         public EnrollmentException() { }
 
         public EnrollmentException(string message) : base(message) { }

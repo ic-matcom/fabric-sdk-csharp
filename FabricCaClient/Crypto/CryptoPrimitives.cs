@@ -19,7 +19,7 @@ namespace FabricCaClient.Crypto {
     /// <summary>
     /// A custom implementation of a <see cref="ICryptoSuite"/> for PKI key creation/signing/verification.
     /// </summary>
-    public class CryptoPrimitives : ICryptoSuite{
+    public class CryptoPrimitives : ICryptoSuite {
         //(to extract as method's parameters)
         private int _securityLevel = 256;
         private string _curveName = "secp256r1"; // ECDSA curve
@@ -71,6 +71,22 @@ namespace FabricCaClient.Crypto {
         }
 
         /// <summary>
+        /// Derives a public key from an existent private key asumming an EC algorithm was used for its generation.
+        /// </summary>
+        /// <param name="privateKey">A private key previously generated.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception">A AsymmetricKeyParameter describing the public key derived.</exception>
+        public AsymmetricKeyParameter DerivePublicKey(AsymmetricKeyParameter privateKey) {
+            try {
+                ECPrivateKeyParameters pk = (ECPrivateKeyParameters)privateKey;
+                return new ECPublicKeyParameters(pk.Parameters.G.Multiply(pk.D), pk.Parameters);
+            }
+            catch (Exception exc) {
+                throw new Exception("Could not derive public key from private key provided.", exc);
+            }
+        }
+
+        /// <summary>
         /// Generates a Certificate signing request according to the given keyPair and subject.
         /// </summary>
         /// <param name="keyPair">An AsymmetricCipherKeyPair instance with public and private keys.</param>
@@ -90,30 +106,14 @@ namespace FabricCaClient.Crypto {
                 DerSet exts = new DerSet(new AttributePkcs(PkcsObjectIdentifiers.Pkcs9AtExtensionRequest, new DerSet(new X509Extensions(extensions))));
 
                 // create the CSR subject
-                //Variant 1
                 IDictionary subjAttributes = new Hashtable {
                     { X509Name.CN, subjectName }
                 };
                 var subject = new X509Name(new ArrayList(subjAttributes.Keys), subjAttributes);
 
                 // get signature factory corresponding to signature algorithm
-                // PkcsObjectIdentifiers.Sha256WithRsaEncryption.Id
                 ISignatureFactory sf = new Asn1SignatureFactory(_signatureAlgorithm, keyPair.Private, new SecureRandom());
                 Pkcs10CertificationRequest pkcs10CertRequest = new Pkcs10CertificationRequest(sf, subject, keyPair.Public, exts);
-
-                //variant 2
-                //var subjAttributes = new Dictionary<DerObjectIdentifier, string> { { X509Name.CN, enrollmentId } };
-                //ISignatureFactory sf = new Asn1SignatureFactory(_signatureAlgorithm, keyPair.Private, new SecureRandom());
-                //Pkcs10CertificationRequest pkcs10CertRequest = new Pkcs10CertificationRequest(sf, new X509Name(subjAttributes.Keys.ToList(), subjAttributes), keyPair.Public, exts);
-                //variant 2 end
-
-                //var csr = Convert.ToBase64String(pkcs10CertRequest.GetEncoded());
-                //var csrPem = Regex.Replace(csr, ".{64}", "$0\n");
-                //strBuilder.Clear();
-                //strBuilder.AppendLine($"-----BEGIN CERTIFICATE REQUEST-----");
-                //strBuilder.AppendLine(csrPem);
-                //strBuilder.AppendLine($"-----END CERTIFICATE REQUEST-----");
-                //Console.WriteLine(strBuilder.ToString());
 
                 // Saving in base 64 format (pem)
                 using StringWriter pemCert = new StringWriter();
@@ -130,12 +130,13 @@ namespace FabricCaClient.Crypto {
         /// <summary>
         /// Signs a given message using the provided Private Key.
         /// </summary>
-        /// <param name="keyPair">KeyPair containing private key.</param>
+        /// <param name="privateKey">Private key to sign with.</param>
         /// <param name="messageToSign">Message to sign.</param>
         /// <returns>A signed message using the signatureAlgorithm specified.</returns>
         /// <exception cref="ArgumentException"></exception>
-        public string Sign(AsymmetricCipherKeyPair keyPair, byte[] messageToSign) {
-            if (keyPair == null)
+        public string Sign(AsymmetricKeyParameter privateKey, byte[] messageToSign) {
+
+            if (privateKey == null)
                 throw new ArgumentException("Unable to sign data, private key must be provided");
             if (messageToSign == null || messageToSign.Length == 0)
                 throw new ArgumentException("Unable to sign empty message");
@@ -144,7 +145,7 @@ namespace FabricCaClient.Crypto {
             ISigner signer = SignerUtilities.GetSigner(_signatureAlgorithm);
 
             // Initilize signer with signing mode and signature key
-            signer.Init(true, keyPair.Private);
+            signer.Init(true, privateKey);
 
             // Specify the data we want to generate signature for
             signer.BlockUpdate(messageToSign, 0, messageToSign.Length);
@@ -152,9 +153,9 @@ namespace FabricCaClient.Crypto {
             // Generate cryptographic signature for the given message.
             byte[] signature = signer.GenerateSignature();
 
-            if (keyPair.Private is ECPrivateKeyParameters) {
-                ECPrivateKeyParameters privateKey = (ECPrivateKeyParameters)keyPair.Private;
-                BigInteger curveN = privateKey.Parameters.N;
+            if (privateKey is ECPrivateKeyParameters) {
+                ECPrivateKeyParameters pk = (ECPrivateKeyParameters)privateKey;
+                BigInteger curveN = pk.Parameters.N;
                 BigInteger[] sigs = DecodeECDSASignature(signature);
                 sigs = PreventMalleability(sigs, curveN);
                 using (MemoryStream ms = new MemoryStream()) {
@@ -214,7 +215,7 @@ namespace FabricCaClient.Crypto {
 
             if (count != 2)
                 throw new CryptoException($"Invalid ECDSA signature. Expected count of 2 but got: {count}. Signature is: {BitConverter.ToString(signature).Replace("-", string.Empty)}");
-            
+
             return sigs;
         }
     }
