@@ -15,7 +15,7 @@ namespace FabricNetwork.Wallets {
         /// Path use to safe info.
         /// </summary>
         public string StorePath;
-        
+
         /// <summary>
         /// Sufix to use for files generated.
         /// </summary>
@@ -104,12 +104,29 @@ namespace FabricNetwork.Wallets {
         }
 
         /// <summary>
-        /// Combine the base storage path with the given label and the suffix used at the wallet.
+        /// Combines the base storage path with the given label and the suffix used at the wallet.
         /// </summary>
         /// <param name="label">Label to add to path.</param>
         /// <returns>The combined path.</returns>
         private string GetFilePath(string label) {
             return Path.Combine(StorePath, label + idFileSuffix);
+        }
+
+        /// <summary>
+        /// Clears a given directory, removes all files and dirs contained withing it.
+        /// </summary>
+        /// <param name="path">Path of directory to clear.</param>
+        /// <exception cref="Exception"></exception>
+        public static void ClearDirectory(string path) {
+            DirectoryInfo di = new DirectoryInfo(path);
+
+            foreach (FileInfo file in di.EnumerateFiles()) {
+                file.Delete();
+            }
+
+            foreach (DirectoryInfo dir in di.EnumerateDirectories()) {
+                dir.Delete(true);
+            }
         }
     }
 }
